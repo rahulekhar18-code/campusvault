@@ -1,0 +1,12 @@
+{
+  "name": "campusvault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CampusVault - Simple, lightweight college notes-sharing website for YCCE",
+  "scripts": {
+    "start:server": "cd server && node src/index.js",
+    "start:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "test:e2e": "cd server && node test-e2e.js"
+  }
+}

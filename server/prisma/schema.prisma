@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  password     String
+  role         Role           @default(STUDENT)
+  isVerified   Boolean        @default(false)
+  otp          String?
+  otpExpiresAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  resources    Resource[]
+
+  @@map("users")
+}
+
+model Resource {
+  id              String         @id @default(cuid())
+  title           String
+  branch          String
+  semester        String
+  subject         String
+  category        String         // Notes, PYQ, Practicals, Assignments
+  originalName    String
+  storageKey      String
+  bucketName      String         @default("campusvault-files")
+  fileSize        Int
+  mimeType        String
+  status          ApprovalStatus @default(PENDING)
+  rejectionReason String?
+  uploaderId      String
+  uploader        User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([branch, semester, subject])
+  @@map("resources")
+}
+
+model AppSettings {
+  id           String   @id @default("global")
+  appName      String   @default("CampusVault")
+  logoUrl      String   @default("")
+  themeColor   String   @default("#2563eb")
+  storageRoot  String   @default("vault")
+  folderFormat String   @default("{branch}/{semester}/{subject}/{category}")
+  updatedAt    DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model AcademicBranch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("academic_branches")
+}
+
+model AcademicSemester {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  number    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("academic_semesters")
+}
+
+model AcademicCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("academic_categories")
+}
+
+model AcademicSubject {
+  id        String   @id @default(cuid())
+  name      String
+  branch    String   @default("IT")
+  semester  String   // "1" to "8"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, branch, semester])
+  @@index([branch, semester])
+  @@map("academic_subjects")
+}
