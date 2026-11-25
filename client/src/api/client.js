@@ -29,10 +29,24 @@ export async function apiRequest(endpoint, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers
+    });
+  } catch (networkErr) {
+    // If request failed (e.g. Render server cold start or temporary DNS glitched), retry after brief delay
+    try {
+      await new Promise(r => setTimeout(r, 1000));
+      response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers
+      });
+    } catch (retryErr) {
+      throw new Error('Connection delayed. Please tap again to retry.');
+    }
+  }
 
   if (!response.ok) {
     let errorMsg = 'An error occurred';

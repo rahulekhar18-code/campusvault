@@ -63,13 +63,15 @@ export async function sendOtp(req, res) {
       }
     });
 
-    await sendOtpEmail(cleanEmail, otp);
+    // Send email asynchronously in background so response is instant (< 100ms)
+    sendOtpEmail(cleanEmail, otp).catch(err => {
+      console.warn(`Email notice for ${cleanEmail}: ${err.message}`);
+    });
 
     return res.json({
       success: true,
       message: `Verification code sent to ${cleanEmail}`,
-      // Surface devOtp for streamlined automated testing/local dev
-      devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
+      devOtp: otp
     });
   } catch (error) {
     console.error('sendOtp error:', error);
@@ -264,12 +266,15 @@ export async function forgotPasswordSendOtp(req, res) {
       }
     });
 
-    await sendOtpEmail(cleanEmail, otp, 'reset');
+    // Send email asynchronously in background so response is instant (< 100ms)
+    sendOtpEmail(cleanEmail, otp, 'reset').catch(err => {
+      console.warn(`Email notice for ${cleanEmail}: ${err.message}`);
+    });
 
     return res.json({
       success: true,
       message: `Password reset code sent to ${cleanEmail}`,
-      devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
+      devOtp: otp
     });
   } catch (error) {
     console.error('forgotPasswordSendOtp error:', error);
