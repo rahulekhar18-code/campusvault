@@ -7,7 +7,12 @@ let transporter = null;
 
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS

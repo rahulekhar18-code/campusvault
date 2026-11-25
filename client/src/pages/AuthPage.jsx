@@ -37,6 +37,7 @@ export default function AuthPage() {
   const [savedAccounts, setSavedAccounts] = useState([]);
 
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -126,16 +127,16 @@ export default function AuthPage() {
       return;
     }
 
-    setLoading(true);
+    setSendingOtp(true);
     try {
       const res = await sendOtp(cleanEmail);
       setOtpSent(true);
-      setSuccess(`Verification code sent to ${cleanEmail}. Check your inbox!`);
+      setSuccess(`Verification code sent to ${cleanEmail}. Please check your Inbox and Spam/Junk folder!`);
       if (res.devOtp) setDevOtpCode(res.devOtp);
     } catch (err) {
       setError(err.message || 'Failed to send OTP code');
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
     }
   };
 
@@ -209,16 +210,16 @@ export default function AuthPage() {
       return;
     }
 
-    setLoading(true);
+    setSendingOtp(true);
     try {
       const res = await forgotPasswordSendOtp(cleanEmail);
       setOtpSent(true);
-      setSuccess(`Password reset code sent to ${cleanEmail}. Check your inbox!`);
+      setSuccess(`Password reset code sent to ${cleanEmail}. Please check your Inbox and Spam/Junk folder!`);
       if (res.devOtp) setDevOtpCode(res.devOtp);
     } catch (err) {
       setError(err.message || 'Failed to send password reset code');
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
     }
   };
 
@@ -342,11 +343,10 @@ export default function AuthPage() {
                       <div
                         key={acc.email}
                         onClick={() => setEmail(acc.email)}
-                        className={`group cursor-pointer inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs transition border ${
-                          email === acc.email
+                        className={`group cursor-pointer inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs transition border ${email === acc.email
                             ? 'bg-blue-50 border-blue-300 text-blue-900 font-semibold'
                             : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                        }`}
+                          }`}
                       >
                         <User className="w-3 h-3 text-gray-400 group-hover:text-blue-600" />
                         <span className="truncate max-w-[170px]">{acc.email}</span>
@@ -486,12 +486,12 @@ export default function AuthPage() {
                   {!otpSent && (
                     <button
                       type="button"
-                      disabled={loading || !email}
+                      disabled={sendingOtp || !email}
                       onClick={handleSendSignupOtp}
                       className="px-4 py-2.5 text-xs font-semibold text-white rounded-lg shadow-sm whitespace-nowrap disabled:opacity-50 min-h-[44px] flex items-center justify-center"
                       style={{ backgroundColor: settings.themeColor || '#2563eb' }}
                     >
-                      {loading ? 'Sending...' : 'Get OTP Code'}
+                      {sendingOtp ? 'Sending...' : 'Get OTP Code'}
                     </button>
                   )}
                 </div>
@@ -609,15 +609,27 @@ export default function AuthPage() {
                   {!otpSent && (
                     <button
                       type="button"
-                      disabled={loading || !email}
+                      disabled={sendingOtp || !email}
                       onClick={handleSendForgotOtp}
                       className="px-4 py-2.5 text-xs font-semibold text-white rounded-lg shadow-sm whitespace-nowrap disabled:opacity-50 min-h-[44px] flex items-center justify-center"
                       style={{ backgroundColor: settings.themeColor || '#2563eb' }}
                     >
-                      {loading ? 'Sending...' : 'Send Reset Code'}
+                      {sendingOtp ? 'Sending...' : 'Send Reset Code'}
                     </button>
                   )}
                 </div>
+                {otpSent && (
+                  <div className="flex items-center justify-between mt-1 text-[11px] text-gray-500">
+                    <span>Sent to: <strong className="text-gray-700">{email}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => { setOtpSent(false); setOtp(''); }}
+                      className="text-blue-600 font-semibold hover:underline"
+                    >
+                      Change Email
+                    </button>
+                  </div>
+                )}
               </div>
 
               {otpSent && (
@@ -642,12 +654,17 @@ export default function AuthPage() {
                       <span>Expires in 10 minutes</span>
                       <button
                         type="button"
+                        disabled={sendingOtp}
                         onClick={handleSendForgotOtp}
-                        className="font-semibold hover:underline text-blue-600 flex items-center space-x-1"
+                        className="font-semibold hover:underline text-blue-600 flex items-center space-x-1 disabled:opacity-50"
                       >
                         <RotateCcw className="w-3 h-3" />
-                        <span>Resend Code</span>
+                        <span>{sendingOtp ? 'Resending...' : 'Resend Code'}</span>
                       </button>
+                    </div>
+                    <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800 flex items-start space-x-1.5">
+                      <span className="flex-shrink-0">📬</span>
+                      <span>College email alert: Agar OTP Primary Inbox me na mile, toh <strong>Spam / Junk</strong> folder ya <strong>Updates</strong> tab zaroor check karein.</span>
                     </div>
                   </div>
 

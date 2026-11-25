@@ -44,11 +44,10 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
           <nav className="flex items-center space-x-1 sm:space-x-2">
             <button
               onClick={() => setCurrentPage('read')}
-              className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-                currentPage === 'read'
+              className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${currentPage === 'read'
                   ? 'text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
+                }`}
               style={currentPage === 'read' ? { backgroundColor: settings.themeColor || '#2563eb' } : {}}
             >
               <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -57,11 +56,10 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
 
             <button
               onClick={() => setCurrentPage('upload')}
-              className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-                currentPage === 'upload'
+              className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${currentPage === 'upload'
                   ? 'text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
+                }`}
               style={currentPage === 'upload' ? { backgroundColor: settings.themeColor || '#2563eb' } : {}}
             >
               <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -71,11 +69,10 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
             {isAdmin && (
               <button
                 onClick={() => setCurrentPage('admin')}
-                className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-                  currentPage === 'admin'
+                className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${currentPage === 'admin'
                     ? 'text-white shadow-sm'
                     : 'text-purple-700 hover:bg-purple-50'
-                }`}
+                  }`}
                 style={currentPage === 'admin' ? { backgroundColor: '#7c3aed' } : {}}
               >
                 <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -93,17 +90,15 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
           <div className="flex items-center space-x-1.5 sm:space-x-3">
             <div className="hidden md:flex flex-col items-end text-right">
               <span className="text-xs font-medium text-gray-800">{user?.email}</span>
-              <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
-                isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-              }`}>
+              <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                }`}>
                 {isAdmin ? 'Admin' : 'Student'}
               </span>
             </div>
 
             {/* Mobile role badge */}
-            <span className={`md:hidden text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
-              isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-            }`}>
+            <span className={`md:hidden text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+              }`}>
               {isAdmin ? 'Admin' : 'User'}
             </span>
 
