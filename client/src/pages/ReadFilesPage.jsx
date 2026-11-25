@@ -228,18 +228,18 @@ export default function ReadFilesPage() {
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
                     <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 leading-snug line-clamp-1" title={item.title}>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug truncate" title={item.title}>
                         {item.title}
                       </h3>
-                      <p className="text-xs font-semibold text-blue-600">{item.subject}</p>
+                      <p className="text-xs font-semibold text-blue-600 truncate">{item.subject}</p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap flex-shrink-0">
                     {item.category}
                   </span>
                 </div>

@@ -229,3 +229,122 @@ export async function login(req, res) {
 export async function getMe(req, res) {
   return res.json({ user: req.user });
 }
+
+/**
+ * Send OTP for Password Reset (Forgot Password)
+ */
+export async function forgotPasswordSendOtp(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'College email is required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!isCollegeEmail(cleanEmail)) {
+      return res.status(400).json({ error: 'Only official @ycce.in college emails are permitted' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with this email. Please register first.' });
+    }
+
+    const otp = generateOtp();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await prisma.user.update({
+      where: { email: cleanEmail },
+      data: {
+        otp,
+        otpExpiresAt
+      }
+    });
+
+    await sendOtpEmail(cleanEmail, otp, 'reset');
+
+    return res.json({
+      success: true,
+      message: `Password reset code sent to ${cleanEmail}`,
+      devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
+    });
+  } catch (error) {
+    console.error('forgotPasswordSendOtp error:', error);
+    return res.status(500).json({ error: 'Failed to send password reset code' });
+  }
+}
+
+/**
+ * Verify OTP and Reset Password
+ */
+export async function resetPassword(req, res) {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, verification code, and new password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!isCollegeEmail(cleanEmail)) {
+      return res.status(400).json({ error: 'Only official @ycce.in emails are allowed' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.otp || user.otp !== otp.toString().trim()) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    if (new Date() > new Date(user.otpExpiresAt)) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        otp: null,
+        otpExpiresAt: null,
+        isVerified: true
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isVerified: true
+      }
+    });
+
+    const token = jwt.sign(
+      { id: updatedUser.id, email: updatedUser.email, role: updatedUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Password has been reset successfully! Logging you in...',
+      token,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    return res.status(500).json({ error: 'Failed to reset password' });
+  }
+}

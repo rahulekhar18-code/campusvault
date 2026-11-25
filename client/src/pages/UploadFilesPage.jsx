@@ -193,7 +193,7 @@ export default function UploadFilesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Upload Form Card */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm sticky top-24">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm lg:sticky lg:top-24">
             <h2 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
               <span>File Details</span>
               <span className="text-[11px] font-normal text-gray-500">Max size: 25MB</span>
@@ -228,7 +228,7 @@ export default function UploadFilesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
                     Branch
@@ -260,7 +260,7 @@ export default function UploadFilesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
                     Subject ({branch} - Sem {semester})

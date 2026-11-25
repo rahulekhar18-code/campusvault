@@ -265,17 +265,17 @@ export default function AdminPanel({ onPendingCountChange }) {
           </p>
         </div>
 
-        {/* 3 Tabs */}
-        <div className="flex bg-gray-100 p-1 rounded-xl self-start md:self-auto border border-gray-200">
+        {/* Admin Tabs Navigation (responsive horizontal scroll) */}
+        <div className="flex bg-gray-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto border border-gray-200 scrollbar-none space-x-1">
           <button
             onClick={() => setActiveTab('pending')}
-            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'pending'
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'pending'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Clock className="w-4 h-4 text-amber-500" />
-            <span>Pending Approvals</span>
+            <span>Pending</span>
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">
               {pendingList.length}
             </span>
@@ -283,18 +283,18 @@ export default function AdminPanel({ onPendingCountChange }) {
 
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'all'
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'all'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Files className="w-4 h-4 text-blue-600" />
-            <span>All Files & Move (CRUD)</span>
+            <span>All Files (CRUD)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'users'
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'users'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -308,13 +308,13 @@ export default function AdminPanel({ onPendingCountChange }) {
 
           <button
             onClick={() => setActiveTab('academics')}
-            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'academics'
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'academics'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <GraduationCap className="w-4 h-4 text-indigo-600" />
-            <span>Academic Structure</span>
+            <span>Academics</span>
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
               {branches.length + semesters.length + categories.length + subjects.length}
             </span>
@@ -322,13 +322,13 @@ export default function AdminPanel({ onPendingCountChange }) {
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'settings'
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'settings'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Settings className="w-4 h-4 text-purple-600" />
-            <span>Customize App</span>
+            <span>Customize</span>
           </button>
         </div>
       </div>

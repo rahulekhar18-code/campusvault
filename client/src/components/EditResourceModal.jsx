@@ -117,8 +117,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-xl border border-gray-200 max-w-lg w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black bg-opacity-50">
+      <div className="bg-white rounded-xl shadow-xl border border-gray-200 max-w-lg w-full max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-bold text-gray-900">
@@ -157,7 +157,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
                 Branch
@@ -189,7 +189,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
                 Subject ({branch} - Sem {semester})
