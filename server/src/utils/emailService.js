@@ -3,10 +3,27 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let transporter = null;
+let gmailTransporter = null;
+let brevoSmtpTransporter = null;
 
+// Initialize Brevo SMTP Relay if configured
+const brevoKey = process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY;
+if (brevoKey && (brevoKey.startsWith('xsmtpsib-') || process.env.BREVO_SMTP_KEY)) {
+  const smtpLogin = process.env.BREVO_SMTP_LOGIN || 'c548e9001@smtp-brevo.com';
+  brevoSmtpTransporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false, // STARTTLS for port 587
+    auth: {
+      user: smtpLogin,
+      pass: brevoKey
+    }
+  });
+}
+
+// Fallback: Initialize Gmail SMTP
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  transporter = nodemailer.createTransport({
+  gmailTransporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
@@ -28,11 +45,11 @@ export function generateOtp() {
 }
 
 /**
- * Send email via Brevo REST API (Ultra-fast, ~200ms, bypasses SMTP handshakes)
+ * Send email via Brevo REST API (Ultra-fast, ~200ms)
  */
-async function sendViaBrevo(email, subjectText, textContent, htmlContent) {
+async function sendViaBrevoApi(email, subjectText, textContent, htmlContent) {
   const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) return false;
+  if (!apiKey || apiKey.startsWith('xsmtpsib-')) return false;
 
   const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'rahulekhar18@gmail.com';
   const senderName = process.env.BREVO_SENDER_NAME || 'CampusVault';
@@ -60,11 +77,11 @@ async function sendViaBrevo(email, subjectText, textContent, htmlContent) {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    throw new Error(`Brevo API Error (${res.status}): ${errData.message || res.statusText}`);
+    throw new Error(`Brevo REST API Error (${res.status}): ${errData.message || res.statusText}`);
   }
 
   const data = await res.json();
-  console.log(`✓ OTP delivered via Brevo API to ${email} (messageId: ${data.messageId})`);
+  console.log(`✓ OTP delivered via Brevo REST API to ${email} (messageId: ${data.messageId})`);
   return true;
 }
 
@@ -99,20 +116,38 @@ export async function sendOtpEmail(email, otp, purpose = 'registration') {
     </div>
   `;
 
-  // 1. Prioritize Brevo REST API (Fastest delivery, direct to inbox)
-  if (process.env.BREVO_API_KEY) {
+  // 1. Try Brevo REST API (Fastest if using xkeysib- API key)
+  if (process.env.BREVO_API_KEY && !process.env.BREVO_API_KEY.startsWith('xsmtpsib-')) {
     try {
-      const ok = await sendViaBrevo(email, subjectText, textContent, htmlContent);
+      const ok = await sendViaBrevoApi(email, subjectText, textContent, htmlContent);
       if (ok) return true;
     } catch (err) {
-      console.warn(`Brevo delivery failed: ${err.message}. Falling back to Gmail SMTP...`);
+      console.warn(`Brevo REST API delivery failed: ${err.message}. Trying Brevo SMTP relay...`);
     }
   }
 
-  // 2. Fallback to Gmail SMTP if Brevo is not set or temporarily down
-  if (transporter) {
+  // 2. Try Brevo SMTP Relay (if using xsmtpsib- SMTP key)
+  if (brevoSmtpTransporter) {
     try {
-      await transporter.sendMail({
+      await brevoSmtpTransporter.sendMail({
+        from: `"CampusVault" <${process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'rahulekhar18@gmail.com'}>`,
+        to: email,
+        subject: subjectText,
+        priority: 'high',
+        text: textContent,
+        html: htmlContent
+      });
+      console.log(`✓ OTP delivered via Brevo SMTP Relay to ${email}`);
+      return true;
+    } catch (err) {
+      console.warn(`Brevo SMTP Relay failed: ${err.message}. Trying Gmail SMTP...`);
+    }
+  }
+
+  // 3. Fallback to Gmail SMTP
+  if (gmailTransporter) {
+    try {
+      await gmailTransporter.sendMail({
         from: `"CampusVault" <${process.env.EMAIL_USER || 'no-reply@campusvault.ycce.in'}>`,
         to: email,
         subject: subjectText,
@@ -128,7 +163,7 @@ export async function sendOtpEmail(email, otp, purpose = 'registration') {
       console.log(`✓ OTP sent via Gmail SMTP to ${email}`);
       return true;
     } catch (err) {
-      console.warn(`SMTP sending notice for ${email}: ${err.message}. (OTP generated: ${otp})`);
+      console.warn(`Gmail SMTP sending notice for ${email}: ${err.message}. (OTP generated: ${otp})`);
       return false;
     }
   } else {
