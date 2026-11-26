@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile, previewFile } from '../api/client';
+import { apiRequest, downloadFile } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import { getSubjectsForSemester } from '../data/subjects';
+import DocumentReaderModal from '../components/DocumentReaderModal';
 import { 
   Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
   Lock, Unlock, Eye, AlertCircle, X, ShieldAlert 
@@ -34,7 +35,7 @@ export default function ReadFilesPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   
   const [downloadingId, setDownloadingId] = useState(null);
-  const [previewingId, setPreviewingId] = useState(null);
+  const [readingResource, setReadingResource] = useState(null);
   const [lockedNoticeResource, setLockedNoticeResource] = useState(null);
 
   // Available subjects based on branch & semester
@@ -75,15 +76,8 @@ export default function ReadFilesPage() {
     fetchResources();
   };
 
-  const handlePreview = async (resource) => {
-    try {
-      setPreviewingId(resource.id);
-      await previewFile(resource.id);
-    } catch (err) {
-      alert(`Unable to open preview: ${err.message}`);
-    } finally {
-      setPreviewingId(null);
-    }
+  const handlePreview = (resource) => {
+    setReadingResource(resource);
   };
 
   const handleDownload = async (resource) => {
@@ -304,15 +298,14 @@ export default function ReadFilesPage() {
                 </span>
 
                 <div className="flex items-center space-x-2">
-                  {/* Read / Preview Button: Always available */}
+                  {/* Read Online Button: Always available for in-app reading without downloading */}
                   <button
                     onClick={() => handlePreview(item)}
-                    disabled={previewingId === item.id}
-                    className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition disabled:opacity-50"
-                    title="Read & view document inline"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                    title="Read & study document in-app"
                   >
                     <Eye className="w-3.5 h-3.5 text-gray-600" />
-                    <span>{previewingId === item.id ? 'Opening...' : 'Read Online'}</span>
+                    <span>Read Online</span>
                   </button>
 
                   {/* Download Button */}
@@ -402,6 +395,14 @@ export default function ReadFilesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* In-App Document Reader Modal */}
+      {readingResource && (
+        <DocumentReaderModal
+          resource={readingResource}
+          onClose={() => setReadingResource(null)}
+        />
       )}
     </div>
   );

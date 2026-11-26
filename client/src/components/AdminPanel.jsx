@@ -3,6 +3,7 @@ import { apiRequest, downloadFile, toggleResourceLock, previewFile } from '../ap
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import EditResourceModal from './EditResourceModal';
+import DocumentReaderModal from './DocumentReaderModal';
 import AcademicManager from './AcademicManager';
 import {
   Shield,
@@ -71,6 +72,7 @@ export default function AdminPanel({ onPendingCountChange }) {
   const [filterBranch, setFilterBranch] = useState('All');
   const [filterSemester, setFilterSemester] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [readingResource, setReadingResource] = useState(null);
 
   // Users Tab State
   const [usersList, setUsersList] = useState([]);
@@ -675,10 +677,19 @@ export default function AdminPanel({ onPendingCountChange }) {
                       </td>
                       <td className="px-3 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end space-x-1.5">
-                          {/* Preview / Download */}
+                          {/* In-App Reader */}
+                          <button
+                            onClick={() => setReadingResource(item)}
+                            title="Read Online In-App"
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Download */}
                           <button
                             onClick={() => handleDownload(item)}
-                            title="Download/Preview"
+                            title="Download File"
                             className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -1033,6 +1044,13 @@ export default function AdminPanel({ onPendingCountChange }) {
           setActionSuccess(`File "${updated.title}" updated and moved to ${updated.storageKey || 'new location'}`);
         }}
       />
+      {/* In-App Document Reader Modal */}
+      {readingResource && (
+        <DocumentReaderModal
+          resource={readingResource}
+          onClose={() => setReadingResource(null)}
+        />
+      )}
     </div>
   );
 }

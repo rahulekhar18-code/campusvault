@@ -113,9 +113,9 @@ export async function downloadFile(resourceId, fallbackName = 'downloaded-file')
 }
 
 /**
- * Opens a file in a new browser tab for inline reading/preview
+ * Fetch raw file blob securely for in-app reader modal
  */
-export async function previewFile(resourceId) {
+export async function fetchResourceBlob(resourceId) {
   const token = getAuthToken();
   const response = await fetch(`${API_BASE}/resources/${resourceId}/download?mode=preview`, {
     headers: {
@@ -124,7 +124,7 @@ export async function previewFile(resourceId) {
   });
 
   if (!response.ok) {
-    let errorMsg = 'Failed to load preview';
+    let errorMsg = 'Failed to load document';
     try {
       const errJson = await response.json();
       errorMsg = errJson.error || errorMsg;
@@ -132,7 +132,16 @@ export async function previewFile(resourceId) {
     throw new Error(errorMsg);
   }
 
+  const mimeType = response.headers.get('Content-Type') || '';
   const blob = await response.blob();
+  return { blob, mimeType };
+}
+
+/**
+ * Opens a file in a new browser tab for inline reading/preview
+ */
+export async function previewFile(resourceId) {
+  const { blob } = await fetchResourceBlob(resourceId);
   const previewUrl = window.URL.createObjectURL(blob);
   window.open(previewUrl, '_blank');
 }
