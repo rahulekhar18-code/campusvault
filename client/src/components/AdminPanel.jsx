@@ -689,8 +689,8 @@ export default function AdminPanel({ onPendingCountChange }) {
                           onClick={() => handleToggleLock(item.id)}
                           title={item.isLocked ? "File is Locked for in-app reading only. Click to Unlock for downloads" : "File is Free to download. Click to Lock as Read-Only"}
                           className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${item.isLocked
-                              ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                              : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                             }`}
                         >
                           {item.isLocked ? (
@@ -711,22 +711,20 @@ export default function AdminPanel({ onPendingCountChange }) {
                           <button
                             onClick={() => handleToggleBadge(item.id, 'topper')}
                             title={item.isTopperVerified ? "Remove Topper badge" : "Mark as Topper Verified"}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${
-                              item.isTopperVerified
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${item.isTopperVerified
                                 ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
                                 : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-yellow-50 hover:text-yellow-700'
-                            }`}
+                              }`}
                           >
                             🥇 Topper
                           </button>
                           <button
                             onClick={() => handleToggleBadge(item.id, 'prof')}
                             title={item.isProfVerified ? "Remove Prof badge" : "Mark as Prof Recommended"}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${
-                              item.isProfVerified
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${item.isProfVerified
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                 : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-emerald-50 hover:text-emerald-700'
-                            }`}
+                              }`}
                           >
                             ⭐ Prof
                           </button>

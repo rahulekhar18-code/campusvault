@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchResourceBlob, askDocumentAssist } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 import { renderAsync } from 'docx-preview';
 import mammoth from 'mammoth';
 import { 
   X, Maximize2, Minimize2, ZoomIn, ZoomOut, BookOpen, 
   Lock, AlertCircle, FileText, Loader2, Sparkles, Send, 
-  Copy, Check, MessageSquare, HelpCircle, Award, ShieldCheck 
+  Copy, Check, MessageSquare, Award, ShieldCheck, ExternalLink 
 } from 'lucide-react';
+
+// Configure PDF.js worker
+if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+}
 
 export default function DocumentReaderModal({ resource, onClose }) {
   const { user } = useAuth();
@@ -19,6 +25,10 @@ export default function DocumentReaderModal({ resource, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
 
+  // PDF Rendering State
+  const [pdfRendering, setPdfRendering] = useState(false);
+  const [pdfPageCount, setPdfPageCount] = useState(0);
+
   // AI Assistant State
   const [aiOpen, setAiOpen] = useState(false);
   const [aiMode, setAiMode] = useState('summary');
@@ -28,6 +38,7 @@ export default function DocumentReaderModal({ resource, onClose }) {
   const [copied, setCopied] = useState(false);
 
   const docxContainerRef = useRef(null);
+  const pdfContainerRef = useRef(null);
   const rawBlobRef = useRef(null);
 
   useEffect(() => {
@@ -40,6 +51,7 @@ export default function DocumentReaderModal({ resource, onClose }) {
       setError('');
       setFileType(null);
       setTextContent('');
+      setPdfPageCount(0);
 
       try {
         const { blob, mimeType } = await fetchResourceBlob(resource.id);
@@ -49,10 +61,11 @@ export default function DocumentReaderModal({ resource, onClose }) {
         const name = (resource.originalName || resource.title || '').toLowerCase();
         const ext = name.split('.').pop();
 
+        createdUrl = URL.createObjectURL(blob);
+        setObjectUrl(createdUrl);
+
         if (mimeType.includes('pdf') || ext === 'pdf') {
           setFileType('pdf');
-          createdUrl = URL.createObjectURL(blob);
-          setObjectUrl(createdUrl);
         } else if (
           mimeType.includes('word') || 
           mimeType.includes('officedocument.wordprocessingml') || 
@@ -65,8 +78,6 @@ export default function DocumentReaderModal({ resource, onClose }) {
           ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)
         ) {
           setFileType('image');
-          createdUrl = URL.createObjectURL(blob);
-          setObjectUrl(createdUrl);
         } else if (
           mimeType.startsWith('text/') || 
           ['txt', 'csv', 'md', 'json', 'py', 'c', 'cpp', 'java'].includes(ext)
@@ -98,7 +109,54 @@ export default function DocumentReaderModal({ resource, onClose }) {
     };
   }, [resource?.id]);
 
-  // When docx type is set and container ref is ready, render Word document
+  // Render PDF using Canvas (Works 100% on Mobile Android, iOS Safari, and Desktop)
+  useEffect(() => {
+    if (fileType !== 'pdf' || !rawBlobRef.current || !pdfContainerRef.current) return;
+
+    let cancelled = false;
+
+    async function renderPdfCanvas() {
+      setPdfRendering(true);
+      try {
+        const arrayBuffer = await rawBlobRef.current.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        if (cancelled || !pdfContainerRef.current) return;
+
+        setPdfPageCount(pdf.numPages);
+        pdfContainerRef.current.innerHTML = '';
+
+        // Render up to 50 pages onto HTML5 canvas
+        for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
+          if (cancelled) break;
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.4 });
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          canvas.className = 'w-full max-w-2xl mx-auto rounded-lg shadow-md mb-4 bg-white block select-none';
+          canvas.style.height = 'auto';
+
+          pdfContainerRef.current.appendChild(canvas);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+        }
+      } catch (err) {
+        console.warn('PDF.js canvas rendering notice:', err);
+      } finally {
+        if (!cancelled) setPdfRendering(false);
+      }
+    }
+
+    renderPdfCanvas();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fileType, loading]);
+
+  // Render DOCX using Mammoth (Clean responsive HTML for mobile) with docx-preview fallback
   useEffect(() => {
     if (fileType !== 'docx' || !rawBlobRef.current || !docxContainerRef.current) return;
 
@@ -106,29 +164,30 @@ export default function DocumentReaderModal({ resource, onClose }) {
 
     async function renderDocx() {
       try {
-        docxContainerRef.current.innerHTML = '';
-        await renderAsync(rawBlobRef.current, docxContainerRef.current, null, {
-          inWrapper: true,
-          ignoreWidth: false,
-          ignoreHeight: false,
-          breakPages: true
-        });
-      } catch (docxErr) {
-        console.warn('docx-preview failed, attempting mammoth fallback:', docxErr);
+        const arrayBuffer = await rawBlobRef.current.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        if (!cancelled && docxContainerRef.current) {
+          docxContainerRef.current.innerHTML = `
+            <div class="prose prose-invert max-w-3xl mx-auto p-4 sm:p-8 bg-gray-900 rounded-xl leading-relaxed text-gray-200">
+              ${result.value || '<p class="text-gray-400 italic">No text content found in document.</p>'}
+            </div>
+          `;
+        }
+      } catch (mammothErr) {
+        console.warn('Mammoth failed, falling back to docx-preview:', mammothErr);
         try {
-          const arrayBuffer = await rawBlobRef.current.arrayBuffer();
-          const result = await mammoth.convertToHtml({ arrayBuffer });
           if (!cancelled && docxContainerRef.current) {
-            docxContainerRef.current.innerHTML = `
-              <div class="p-8 max-w-3xl mx-auto bg-white rounded-xl shadow-sm text-gray-800 leading-relaxed prose">
-                ${result.value}
-              </div>
-            `;
+            docxContainerRef.current.innerHTML = '';
+            await renderAsync(rawBlobRef.current, docxContainerRef.current, null, {
+              inWrapper: false,
+              ignoreWidth: true,
+              ignoreHeight: true,
+              breakPages: false
+            });
           }
-        } catch (mammothErr) {
-          console.error('Both docx renderers failed:', mammothErr);
+        } catch (docxErr) {
           if (!cancelled) {
-            setError('Unable to render this Word document inline. Please ask admin or try another file.');
+            setError('Unable to render this Word document inline on mobile. Please open in tab or ask admin.');
           }
         }
       }
@@ -177,18 +236,18 @@ export default function DocumentReaderModal({ resource, onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div 
-        className={`bg-gray-900 border border-gray-700 rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
+        className={`bg-gray-900 border border-gray-700 rounded-xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
           isFullscreen 
-            ? 'fixed inset-2 z-50 rounded-xl' 
-            : 'w-full max-w-6xl h-[92vh]'
+            ? 'fixed inset-1 sm:inset-2 z-50 rounded-xl' 
+            : 'w-full max-w-6xl h-[94vh] sm:h-[92vh]'
         }`}
       >
         {/* Top Header Bar */}
-        <div className="bg-gray-800/95 border-b border-gray-700 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between text-white flex-shrink-0 z-40">
+        <div className="bg-gray-800/95 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between text-white flex-shrink-0 z-40">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 text-blue-400 flex-shrink-0">
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -199,7 +258,7 @@ export default function DocumentReaderModal({ resource, onClose }) {
                   {resource.title}
                 </h2>
                 {resource.isTopperVerified && (
-                  <span className="hidden xs:inline-flex items-center space-x-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="hidden xs:inline-flex items-center space-x-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">
                     <Award className="w-2.5 h-2.5" />
                     <span>Topper</span>
                   </span>
@@ -219,12 +278,27 @@ export default function DocumentReaderModal({ resource, onClose }) {
               </div>
               <p className="text-[10px] sm:text-xs text-gray-400 truncate">
                 {resource.subject} • {resource.branch} • Sem {resource.semester} • {resource.category}
+                {pdfPageCount > 0 && ` • ${pdfPageCount} Pages`}
               </p>
             </div>
           </div>
 
-          {/* Controls: AI Assistant, Zoom, Fullscreen, Close */}
-          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+          {/* Controls: Open Tab, AI Assistant, Zoom, Fullscreen, Close */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+            {/* Open in Tab Button (Only for unlocked PDFs, never for locked resources or formats that force download) */}
+            {objectUrl && !resource.isLocked && fileType === 'pdf' && (
+              <a
+                href={objectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1 px-2 py-1 text-[11px] font-semibold text-blue-300 hover:text-white bg-blue-600/30 hover:bg-blue-600/50 rounded-md border border-blue-500/40 transition"
+                title="Open in browser tab for full native mobile viewing"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden xs:inline">Open Tab</span>
+              </a>
+            )}
+
             {/* AI Assistant Button */}
             <button
               type="button"
@@ -235,68 +309,45 @@ export default function DocumentReaderModal({ resource, onClose }) {
                   setAiOpen(!aiOpen);
                 }
               }}
-              className={`inline-flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm ${
+              className={`inline-flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition shadow-sm ${
                 aiOpen 
                   ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
                   : 'bg-gradient-to-r from-purple-600/90 to-blue-600/90 hover:from-purple-500 hover:to-blue-500 text-white'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span className="hidden sm:inline">AI Study Assistant</span>
-              <span className="sm:hidden text-[11px]">AI</span>
+              <span className="hidden sm:inline">AI Assistant</span>
+              <span className="sm:hidden text-[10px]">AI</span>
             </button>
-
-            {/* Zoom Controls for docx & image */}
-            {(fileType === 'docx' || fileType === 'image') && (
-              <div className="hidden sm:flex items-center space-x-1 bg-gray-700/60 rounded-lg p-1 border border-gray-600 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.max(z - 15, 60))}
-                  className="p-1 rounded hover:bg-gray-600 text-gray-300 hover:text-white transition"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <span className="font-mono text-[11px] px-1.5 text-gray-300">{zoomLevel}%</span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.min(z + 15, 160))}
-                  className="p-1 rounded hover:bg-gray-600 text-gray-300 hover:text-white transition"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
 
             {/* Fullscreen Toggle */}
             <button
               type="button"
               onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700 transition"
+              className="p-1 sm:p-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700 transition"
               title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 transition"
+              className="p-1 sm:p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 transition"
               title="Close Reader (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
-        {/* Reader Workspace (Split Layout if AI Panel Open) */}
+        {/* Reader Workspace (Split Layout on desktop, overlay on mobile) */}
         <div className="flex-1 bg-gray-950 overflow-hidden relative flex flex-row">
           {/* Main Document Viewport */}
           <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
             {/* Dynamic Anti-Leak Security Watermark Overlay */}
-            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.06] rotate-[-22deg] scale-125">
+            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.05] sm:opacity-[0.06] rotate-[-22deg] scale-125">
               {[...Array(7)].map((_, i) => (
                 <div key={i} className="flex justify-around whitespace-nowrap text-xs font-mono font-bold tracking-widest text-white uppercase">
                   <span>CampusVault • {user?.email || 'YCCE Student'}</span>
@@ -319,56 +370,68 @@ export default function DocumentReaderModal({ resource, onClose }) {
                 <AlertCircle className="w-8 h-8 text-red-400 mx-auto" />
                 <h3 className="text-sm font-bold text-red-200">Failed to Display Document</h3>
                 <p className="text-xs text-red-300 leading-relaxed">{error}</p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="mt-2 px-4 py-1.5 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition"
-                >
-                  Close
-                </button>
+                <div className="flex items-center justify-center space-x-2 pt-2">
+                  {objectUrl && !resource.isLocked && fileType === 'pdf' && (
+                    <a
+                      href={objectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"
+                    >
+                      Open in New Tab
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-3 py-1.5 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             )}
 
             {!loading && !error && (
               <>
-                {/* PDF Viewer */}
-                {fileType === 'pdf' && objectUrl && (
-                  <div className="w-full h-full bg-gray-900">
-                    <iframe
-                      src={`${objectUrl}#toolbar=0&navpanes=0`}
-                      className="w-full h-full border-0 select-none"
-                      title={resource.title}
-                    />
+                {/* PDF Viewer: Canvas rendering (100% works on Android Chrome, iOS Safari, and Desktop) */}
+                {fileType === 'pdf' && (
+                  <div className="w-full h-full overflow-y-auto p-2 sm:p-6 bg-gray-950 flex flex-col items-center">
+                    {pdfRendering && (
+                      <div className="py-6 text-center text-gray-400 text-xs flex items-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                        <span>Rendering PDF pages on mobile canvas...</span>
+                      </div>
+                    )}
+                    <div ref={pdfContainerRef} className="w-full max-w-3xl flex flex-col items-center" />
                   </div>
                 )}
 
-                {/* DOCX Viewer */}
+                {/* DOCX Viewer: Pure responsive HTML (Wraps cleanly on mobile) */}
                 {fileType === 'docx' && (
-                  <div className="w-full h-full overflow-y-auto p-4 sm:p-8 bg-gray-900/60 docx-viewer-container">
+                  <div className="w-full h-full overflow-y-auto p-3 sm:p-8 bg-gray-950 docx-viewer-container">
                     <div 
                       ref={docxContainerRef}
-                      style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-                      className="transition-transform duration-150 mx-auto max-w-4xl"
+                      className="mx-auto max-w-3xl text-gray-200"
                     />
                   </div>
                 )}
 
                 {/* Image Viewer */}
                 {fileType === 'image' && objectUrl && (
-                  <div className="w-full h-full overflow-auto flex items-center justify-center p-4 bg-gray-950">
+                  <div className="w-full h-full overflow-auto flex items-center justify-center p-3 sm:p-4 bg-gray-950">
                     <img
                       src={objectUrl}
                       alt={resource.title}
-                      style={{ transform: `scale(${zoomLevel / 100})` }}
-                      className="max-h-[85vh] max-w-full object-contain rounded-lg shadow-lg select-none transition-transform duration-150"
+                      className="max-h-[85vh] max-w-full object-contain rounded-lg shadow-lg select-none"
                     />
                   </div>
                 )}
 
                 {/* Text / Code Viewer */}
                 {fileType === 'text' && (
-                  <div className="w-full h-full overflow-auto p-6 bg-gray-900">
-                    <pre className="max-w-4xl mx-auto p-6 bg-gray-950 rounded-xl border border-gray-800 text-gray-200 font-mono text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-none">
+                  <div className="w-full h-full overflow-auto p-4 sm:p-6 bg-gray-900">
+                    <pre className="max-w-4xl mx-auto p-4 sm:p-6 bg-gray-950 rounded-xl border border-gray-800 text-gray-200 font-mono text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-none">
                       {textContent}
                     </pre>
                   </div>
@@ -521,10 +584,10 @@ export default function DocumentReaderModal({ resource, onClose }) {
         </div>
 
         {/* Bottom Status / Protection Notice */}
-        <div className="bg-gray-800/80 border-t border-gray-700/80 px-4 py-2 flex items-center justify-between text-[11px] text-gray-400 z-40">
-          <div className="flex items-center space-x-1.5">
-            <Lock className="w-3 h-3 text-amber-400" />
-            <span>CampusVault In-App Reader (Protected Academic Resource)</span>
+        <div className="bg-gray-800/80 border-t border-gray-700/80 px-3 sm:px-4 py-2 flex items-center justify-between text-[10px] sm:text-[11px] text-gray-400 z-40">
+          <div className="flex items-center space-x-1.5 truncate">
+            <Lock className="w-3 h-3 text-amber-400 flex-shrink-0" />
+            <span className="truncate">CampusVault In-App Reader</span>
           </div>
           <span className="hidden sm:inline text-gray-500 font-mono text-[10px]">
             User: {user?.email || 'Logged In'} • Watermarked for Security
