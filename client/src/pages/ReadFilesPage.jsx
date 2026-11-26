@@ -123,17 +123,17 @@ export default function ReadFilesPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
         <form onSubmit={handleSearchSubmit} className="mb-4">
           <div className="relative">
-            <Search className="w-5 h-5 absolute left-3.5 top-3 text-gray-400" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute left-3 sm:left-3.5 top-2.5 sm:top-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Search files by title, subject, or filename..."
+              placeholder="Search by title, subject, filename..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-24 py-2.5 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full pl-9 sm:pl-11 pr-20 sm:pr-24 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
             <button
               type="submit"
-              className="absolute right-1.5 top-1.5 px-4 py-1.5 text-xs font-semibold text-white rounded-md transition shadow-sm"
+              className="absolute right-1 top-1 sm:right-1.5 sm:top-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white rounded-md transition shadow-sm"
               style={{ backgroundColor: settings.themeColor || '#2563eb' }}
             >
               Search

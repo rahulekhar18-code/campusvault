@@ -51,7 +51,7 @@ function AppContent() {
         pendingCount={pendingCount}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         {/* Page 2: Read Files */}
         {currentPage === 'read' && <ReadFilesPage />}
 
@@ -64,7 +64,7 @@ function AppContent() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400">
+      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400 mb-14 md:mb-0">
         CampusVault • Lightweight College Notes & Resources • Verified @ycce.in
       </footer>
     </div>
