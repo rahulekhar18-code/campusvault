@@ -5,7 +5,7 @@ const AcademicContext = createContext(null);
 
 const DEFAULT_BRANCHES = ['IT', 'CSE', 'AIDS', 'ECE', 'MECH', 'CIVIL', 'EE'];
 const DEFAULT_SEMESTERS = ['1', '2', '3', '4', '5', '6', '7', '8'];
-const DEFAULT_CATEGORIES = ['Notes', 'PYQ', 'Practicals', 'Assignments'];
+const DEFAULT_CATEGORIES = ['Notes', 'PYQ', 'Practicals', 'Assignments', 'Placement'];
 
 export function AcademicProvider({ children }) {
   const [branches, setBranches] = useState([]);

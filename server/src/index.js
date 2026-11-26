@@ -6,6 +6,7 @@ import resourceRoutes from './routes/resourceRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import academicRoutes from './routes/academicRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { initDatabase } from './config/db.js';
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/academic', academicRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

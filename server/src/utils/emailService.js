@@ -171,3 +171,95 @@ export async function sendOtpEmail(email, otp, purpose = 'registration') {
     return true;
   }
 }
+
+/**
+ * Send Weekly/Instant Resource Digest Email to Students
+ */
+export async function sendResourceDigestEmail(email, branch, semester, resources = []) {
+  const subjectText = `📚 CampusVault: New ${branch || 'Academic'} Study Notes & PYQs Available!`;
+  
+  const textContent = `Hello YCCEian,
+New verified study resources have just been approved on CampusVault for ${branch ? `Branch: ${branch}` : 'your branch'}${semester ? `, Semester: ${semester}` : ''}:
+
+${resources.map((r, i) => `${i + 1}. [${r.category}] ${r.title} - ${r.subject}`).join('\n')}
+
+Visit CampusVault to read them online: https://campusvault-tau.vercel.app
+
+Best regards,
+CampusVault Team (YCCE)`;
+
+  const itemsHtml = resources.map(r => `
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+        <span style="font-size: 11px; font-weight: 700; color: #2563eb; background-color: #eff6ff; padding: 2px 8px; border-radius: 12px; text-transform: uppercase;">
+          ${r.category}
+        </span>
+        <span style="font-size: 11px; color: #64748b;">${r.branch} • Sem ${r.semester}</span>
+      </div>
+      <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">
+        ${r.title}
+      </div>
+      <div style="font-size: 12px; color: #475569;">
+        Subject: <strong>${r.subject}</strong> ${r.isTopperVerified ? '• <span style="color:#d97706;">🥇 Topper Verified</span>' : ''}
+      </div>
+    </div>
+  `).join('');
+
+  const htmlContent = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #2563eb; font-size: 22px; font-weight: 800; margin: 0;">CampusVault</h1>
+        <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">YCCE Verified Academic Resources</p>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+        <h2 style="color: #1e3a8a; font-size: 16px; font-weight: 700; margin: 0 0 6px 0;">
+          🎓 New Resources Digest
+        </h2>
+        <p style="color: #334155; font-size: 13px; margin: 0; line-height: 1.5;">
+          Here are the latest notes, PYQs, and placement materials curated for <strong>${branch || 'All Branches'}</strong> (Semester ${semester || 'All'}):
+        </p>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        ${itemsHtml || '<p style="color:#64748b;font-size:13px;">Visit the portal to explore all approved files.</p>'}
+      </div>
+
+      <div style="text-align: center; margin-bottom: 24px;">
+        <a href="https://campusvault-tau.vercel.app" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 28px; border-radius: 8px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">
+          Open CampusVault to Read
+        </a>
+      </div>
+
+      <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; text-align: center;">
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+          You received this update because you are registered with an active @ycce.in account on CampusVault.
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const sentApi = await sendViaBrevoApi(email, subjectText, textContent, htmlContent);
+    if (sentApi) return true;
+  } catch (err) {
+    console.warn(`Digest Brevo API notice for ${email}: ${err.message}`);
+  }
+
+  if (gmailTransporter) {
+    try {
+      await gmailTransporter.sendMail({
+        from: `"CampusVault" <${process.env.EMAIL_USER || 'no-reply@campusvault.ycce.in'}>`,
+        to: email,
+        subject: subjectText,
+        text: textContent,
+        html: htmlContent
+      });
+      return true;
+    } catch (e) {
+      console.warn(`Gmail SMTP fallback error: ${e.message}`);
+    }
+  }
+
+  return false;
+}

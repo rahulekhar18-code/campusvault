@@ -7,7 +7,7 @@ import { getSubjectsForSemester } from '../data/subjects';
 import DocumentReaderModal from '../components/DocumentReaderModal';
 import { 
   Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
-  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert 
+  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase 
 } from 'lucide-react';
 
 function formatFileSize(bytes) {
@@ -33,6 +33,7 @@ export default function ReadFilesPage() {
   const [selectedSemester, setSelectedSemester] = useState('All');
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [topperOnly, setTopperOnly] = useState(false);
   
   const [downloadingId, setDownloadingId] = useState(null);
   const [readingResource, setReadingResource] = useState(null);
@@ -57,6 +58,7 @@ export default function ReadFilesPage() {
       if (selectedSemester !== 'All') params.append('semester', selectedSemester);
       if (selectedSubject !== 'All') params.append('subject', selectedSubject);
       if (selectedCategory !== 'All') params.append('category', selectedCategory);
+      if (topperOnly) params.append('topperOnly', 'true');
 
       const data = await apiRequest(`/resources?${params.toString()}`);
       setResources(data || []);
@@ -69,7 +71,7 @@ export default function ReadFilesPage() {
 
   useEffect(() => {
     fetchResources();
-  }, [selectedBranch, selectedSemester, selectedSubject, selectedCategory]);
+  }, [selectedBranch, selectedSemester, selectedSubject, selectedCategory, topperOnly]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -212,6 +214,57 @@ export default function ReadFilesPage() {
             </select>
           </div>
         </div>
+
+        {/* Quick Discovery Pills */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100 text-xs">
+          <span className="text-gray-400 font-semibold text-[11px] mr-1">Quick Filters:</span>
+          <button
+            type="button"
+            onClick={() => { setTopperOnly(false); setSelectedCategory('All'); }}
+            className={`px-3 py-1 rounded-full font-semibold transition ${
+              !topperOnly && selectedCategory === 'All' 
+                ? 'bg-gray-900 text-white shadow-sm' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            All Resources
+          </button>
+          <button
+            type="button"
+            onClick={() => setTopperOnly(!topperOnly)}
+            className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full font-semibold transition ${
+              topperOnly 
+                ? 'bg-yellow-500 text-white shadow-sm ring-2 ring-yellow-300' 
+                : 'bg-yellow-50 text-yellow-800 border border-yellow-200 hover:bg-yellow-100'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>🥇 Topper Verified Only</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory(selectedCategory === 'Placement' ? 'All' : 'Placement')}
+            className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full font-semibold transition ${
+              selectedCategory === 'Placement' 
+                ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-300' 
+                : 'bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>💼 Placements & Interviews</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory(selectedCategory === 'PYQ' ? 'All' : 'PYQ')}
+            className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full font-semibold transition ${
+              selectedCategory === 'PYQ' 
+                ? 'bg-blue-600 text-white shadow-sm' 
+                : 'bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100'
+            }`}
+          >
+            <span>📄 PYQs</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -259,9 +312,23 @@ export default function ReadFilesPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
-                      {item.category}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {item.isTopperVerified && (
+                        <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300" title="Topper Verified Notes">
+                          <Award className="w-2.5 h-2.5" />
+                          <span>Topper</span>
+                        </span>
+                      )}
+                      {item.isProfVerified && (
+                        <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300" title="Professor Recommended">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                          <span>Prof</span>
+                        </span>
+                      )}
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                        {item.category}
+                      </span>
+                    </div>
                     {item.isLocked ? (
                       <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                         <Lock className="w-2.5 h-2.5" />

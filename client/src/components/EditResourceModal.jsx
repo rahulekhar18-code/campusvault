@@ -25,6 +25,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
   const [category, setCategory] = useState(resource.category || 'Notes');
   const [status, setStatus] = useState(resource.status || 'PENDING');
   const [isLocked, setIsLocked] = useState(resource.isLocked || false);
+  const [isTopperVerified, setIsTopperVerified] = useState(resource.isTopperVerified || false);
+  const [isProfVerified, setIsProfVerified] = useState(resource.isProfVerified || false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +45,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
       setCategory(resource.category || 'Notes');
       setStatus(resource.status || 'PENDING');
       setIsLocked(resource.isLocked || false);
+      setIsTopperVerified(resource.isTopperVerified || false);
+      setIsProfVerified(resource.isProfVerified || false);
 
       const subs = getSubjects(resource.branch || 'IT', resource.semester || '1');
       const finalSubs = subs.length > 0 ? subs : getSubjectsForSemester(resource.semester || '1');
@@ -97,7 +101,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
           semester,
           subject: finalSubject,
           category,
-          ...(isAdmin ? { status, isLocked } : {})
+          ...(isAdmin ? { status, isLocked, isTopperVerified, isProfVerified } : {})
         })
       });
 
@@ -109,7 +113,9 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
         subject: finalSubject,
         category,
         status,
-        isLocked
+        isLocked,
+        isTopperVerified,
+        isProfVerified
       });
       onClose();
     } catch (err) {
@@ -274,6 +280,37 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
                 onChange={(e) => setIsLocked(e.target.checked)}
                 className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer ml-3 flex-shrink-0"
               />
+            </div>
+          )}
+
+          {/* Admin Quality Verification Badges */}
+          {isAdmin && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="p-2.5 bg-yellow-50/80 border border-yellow-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-yellow-900 block">🥇 Topper Verified</span>
+                  <span className="text-[10px] text-yellow-700">High-scoring student notes</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isTopperVerified}
+                  onChange={(e) => setIsTopperVerified(e.target.checked)}
+                  className="w-4 h-4 text-yellow-600 rounded focus:ring-yellow-500 cursor-pointer ml-2 flex-shrink-0"
+                />
+              </div>
+
+              <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-emerald-900 block">⭐ Prof. Recommended</span>
+                  <span className="text-[10px] text-emerald-700">Faculty vetted resource</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isProfVerified}
+                  onChange={(e) => setIsProfVerified(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer ml-2 flex-shrink-0"
+                />
+              </div>
             </div>
           )}
 

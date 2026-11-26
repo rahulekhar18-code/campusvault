@@ -1,4 +1,5 @@
 import { prisma } from '../config/db.js';
+import { sendResourceDigestEmail } from '../utils/emailService.js';
 
 /**
  * Get all files awaiting approval
@@ -201,5 +202,105 @@ export async function getAllUsers(req, res) {
   } catch (error) {
     console.error('getAllUsers error:', error);
     return res.status(500).json({ error: 'Failed to retrieve registered users' });
+  }
+}
+
+/**
+ * Toggle verification badges (Topper Verified or Prof Recommended)
+ */
+export async function toggleVerificationBadge(req, res) {
+  try {
+    const { id } = req.params;
+    const { type } = req.body; // 'topper' | 'prof'
+
+    const resource = await prisma.resource.findUnique({
+      where: { id }
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    const data = type === 'topper'
+      ? { isTopperVerified: !resource.isTopperVerified }
+      : { isProfVerified: !resource.isProfVerified };
+
+    const updated = await prisma.resource.update({
+      where: { id },
+      data
+    });
+
+    return res.json({
+      success: true,
+      message: `Verification badge updated for "${updated.title}"`,
+      resource: updated
+    });
+  } catch (error) {
+    console.error('toggleVerificationBadge error:', error);
+    return res.status(500).json({ error: 'Failed to update verification badge' });
+  }
+}
+
+/**
+ * Send resource digest email to students
+ */
+export async function sendResourceDigest(req, res) {
+  try {
+    const { branch, semester } = req.body;
+
+    // Fetch top 5 recent approved resources for this branch/semester
+    const where = { status: 'APPROVED' };
+    if (branch && branch !== 'All') where.branch = { equals: branch, mode: 'insensitive' };
+    if (semester && semester !== 'All') where.semester = { equals: semester.toString() };
+
+    const resources = await prisma.resource.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        subject: true,
+        category: true,
+        branch: true,
+        semester: true,
+        isTopperVerified: true
+      }
+    });
+
+    if (resources.length === 0) {
+      return res.status(400).json({ error: 'No approved resources found to send in digest' });
+    }
+
+    // Get active verified student emails
+    const users = await prisma.user.findMany({
+      where: { isVerified: true },
+      select: { email: true }
+    });
+
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'No verified students found' });
+    }
+
+    let sentCount = 0;
+    // Dispatch in batches or to all
+    for (const u of users) {
+      try {
+        const ok = await sendResourceDigestEmail(u.email, branch, semester, resources);
+        if (ok) sentCount++;
+      } catch (e) {
+        console.warn(`Digest send error for ${u.email}:`, e.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Digest sent successfully to ${sentCount} student(s) via Brevo`,
+      sentCount,
+      resourcesCount: resources.length
+    });
+  } catch (error) {
+    console.error('sendResourceDigest error:', error);
+    return res.status(500).json({ error: 'Failed to send resource digest' });
   }
 }

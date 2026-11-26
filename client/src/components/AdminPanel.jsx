@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile, toggleResourceLock, previewFile } from '../api/client';
+import { apiRequest, downloadFile, toggleResourceLock, toggleVerificationBadge, sendResourceDigest, previewFile } from '../api/client';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import EditResourceModal from './EditResourceModal';
@@ -31,7 +31,8 @@ import {
   GraduationCap,
   Lock,
   Unlock,
-  Eye
+  Eye,
+  Award
 } from 'lucide-react';
 
 const PRESET_THEMES = [
@@ -249,6 +250,41 @@ export default function AdminPanel({ onPendingCountChange }) {
     }
   };
 
+  const handleToggleBadge = async (id, type) => {
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await toggleVerificationBadge(id, type);
+      setActionSuccess(res.message);
+      setAllResources(prev =>
+        prev.map(r => {
+          if (r.id !== id) return r;
+          return type === 'topper'
+            ? { ...r, isTopperVerified: !r.isTopperVerified }
+            : { ...r, isProfVerified: !r.isProfVerified };
+        })
+      );
+    } catch (err) {
+      setActionError(err.message || 'Failed to update badge');
+    }
+  };
+
+  const [sendingDigest, setSendingDigest] = useState(false);
+  const handleSendDigest = async () => {
+    if (!window.confirm('Send an email digest of latest resources to students via Brevo?')) return;
+    setActionError('');
+    setActionSuccess('');
+    setSendingDigest(true);
+    try {
+      const res = await sendResourceDigest(filterBranch, filterSemester);
+      setActionSuccess(res.message || 'Digest dispatched successfully!');
+    } catch (err) {
+      setActionError(err.message || 'Failed to send digest');
+    } finally {
+      setSendingDigest(false);
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     setActionError('');
@@ -289,8 +325,8 @@ export default function AdminPanel({ onPendingCountChange }) {
           <button
             onClick={() => setActiveTab('pending')}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'pending'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Clock className="w-4 h-4 text-amber-500" />
@@ -303,8 +339,8 @@ export default function AdminPanel({ onPendingCountChange }) {
           <button
             onClick={() => setActiveTab('all')}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'all'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Files className="w-4 h-4 text-blue-600" />
@@ -314,8 +350,8 @@ export default function AdminPanel({ onPendingCountChange }) {
           <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'users'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Users className="w-4 h-4 text-emerald-600" />
@@ -328,8 +364,8 @@ export default function AdminPanel({ onPendingCountChange }) {
           <button
             onClick={() => setActiveTab('academics')}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'academics'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <GraduationCap className="w-4 h-4 text-indigo-600" />
@@ -342,8 +378,8 @@ export default function AdminPanel({ onPendingCountChange }) {
           <button
             onClick={() => setActiveTab('settings')}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition flex-shrink-0 whitespace-nowrap ${activeTab === 'settings'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <Settings className="w-4 h-4 text-purple-600" />
@@ -514,12 +550,24 @@ export default function AdminPanel({ onPendingCountChange }) {
                 Manage, edit, change status, and move files across branch/semester/subject storage folders.
               </p>
             </div>
-            <button
-              onClick={fetchAllResources}
-              className="text-xs font-semibold text-blue-600 hover:underline self-start md:self-auto"
-            >
-              Refresh Files
-            </button>
+            <div className="flex items-center space-x-2 self-start md:self-auto">
+              <button
+                type="button"
+                onClick={handleSendDigest}
+                disabled={sendingDigest}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
+                title="Send email digest of latest resources to students via Brevo"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>{sendingDigest ? 'Dispatching...' : 'Send Digest (Brevo)'}</span>
+              </button>
+              <button
+                onClick={fetchAllResources}
+                className="text-xs font-semibold text-blue-600 hover:underline px-2"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Filters Bar */}
@@ -547,10 +595,10 @@ export default function AdminPanel({ onPendingCountChange }) {
               >
                 <option value="All">All Branches</option>
                 {
-                    branchCodes.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))
-                  }
+                  branchCodes.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))
+                }
               </select>
             </div>
 
@@ -563,10 +611,10 @@ export default function AdminPanel({ onPendingCountChange }) {
               >
                 <option value="All">All Semesters</option>
                 {
-                    semesterNumbers.map(s => (
-                      <option key={s} value={s}>Semester {s}</option>
-                    ))
-                  }
+                  semesterNumbers.map(s => (
+                    <option key={s} value={s}>Semester {s}</option>
+                  ))
+                }
               </select>
             </div>
 
@@ -610,6 +658,7 @@ export default function AdminPanel({ onPendingCountChange }) {
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Subject & Category</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Storage Location (Path)</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Access Mode</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-gray-600">Badges</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Status</th>
                     <th className="px-3 py-2.5 text-right font-bold text-gray-600">Actions</th>
                   </tr>
@@ -639,11 +688,10 @@ export default function AdminPanel({ onPendingCountChange }) {
                         <button
                           onClick={() => handleToggleLock(item.id)}
                           title={item.isLocked ? "File is Locked for in-app reading only. Click to Unlock for downloads" : "File is Free to download. Click to Lock as Read-Only"}
-                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${
-                            item.isLocked
+                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${item.isLocked
                               ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                               : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                          }`}
+                            }`}
                         >
                           {item.isLocked ? (
                             <>
@@ -657,6 +705,32 @@ export default function AdminPanel({ onPendingCountChange }) {
                             </>
                           )}
                         </button>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleToggleBadge(item.id, 'topper')}
+                            title={item.isTopperVerified ? "Remove Topper badge" : "Mark as Topper Verified"}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${
+                              item.isTopperVerified
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                                : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-yellow-50 hover:text-yellow-700'
+                            }`}
+                          >
+                            🥇 Topper
+                          </button>
+                          <button
+                            onClick={() => handleToggleBadge(item.id, 'prof')}
+                            title={item.isProfVerified ? "Remove Prof badge" : "Mark as Prof Recommended"}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${
+                              item.isProfVerified
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-emerald-50 hover:text-emerald-700'
+                            }`}
+                          >
+                            ⭐ Prof
+                          </button>
+                        </div>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         {item.status === 'APPROVED' && (
@@ -837,8 +911,8 @@ export default function AdminPanel({ onPendingCountChange }) {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${usr.role === 'ADMIN'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-blue-100 text-blue-800'
                           }`}>
                           {usr.role}
                         </span>
@@ -944,8 +1018,8 @@ export default function AdminPanel({ onPendingCountChange }) {
                     type="button"
                     onClick={() => setThemeColor(preset.color)}
                     className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${themeColor.toLowerCase() === preset.color.toLowerCase()
-                        ? 'border-gray-900 bg-gray-50 font-bold'
-                        : 'border-gray-200 hover:bg-gray-50'
+                      ? 'border-gray-900 bg-gray-50 font-bold'
+                      : 'border-gray-200 hover:bg-gray-50'
                       }`}
                   >
                     <span

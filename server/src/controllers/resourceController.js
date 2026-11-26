@@ -29,6 +29,9 @@ export async function getApprovedResources(req, res) {
     if (category && category !== 'all') {
       where.category = { equals: category, mode: 'insensitive' };
     }
+    if (req.query.topperOnly === 'true') {
+      where.isTopperVerified = true;
+    }
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
@@ -53,6 +56,8 @@ export async function getApprovedResources(req, res) {
         fileSize: true,
         mimeType: true,
         isLocked: true,
+        isTopperVerified: true,
+        isProfVerified: true,
         createdAt: true,
         uploader: {
           select: { email: true }
@@ -229,7 +234,9 @@ export async function updateResource(req, res) {
         category: newCategory,
         storageKey,
         ...(isAdmin && status ? { status } : {}),
-        ...(isAdmin && typeof req.body.isLocked === 'boolean' ? { isLocked: req.body.isLocked } : {})
+        ...(isAdmin && typeof req.body.isLocked === 'boolean' ? { isLocked: req.body.isLocked } : {}),
+        ...(isAdmin && typeof req.body.isTopperVerified === 'boolean' ? { isTopperVerified: req.body.isTopperVerified } : {}),
+        ...(isAdmin && typeof req.body.isProfVerified === 'boolean' ? { isProfVerified: req.body.isProfVerified } : {})
       }
     });
 

@@ -154,3 +154,33 @@ export async function toggleResourceLock(id) {
     method: 'PATCH'
   });
 }
+
+/**
+ * Toggle verification badges (Topper Verified or Prof Recommended)
+ */
+export async function toggleVerificationBadge(id, type) {
+  return await apiRequest(`/admin/resources/${id}/verification`, {
+    method: 'PATCH',
+    body: JSON.stringify({ type })
+  });
+}
+
+/**
+ * Send resource digest email via Brevo (Admin)
+ */
+export async function sendResourceDigest(branch, semester) {
+  return await apiRequest('/admin/send-digest', {
+    method: 'POST',
+    body: JSON.stringify({ branch, semester })
+  });
+}
+
+/**
+ * In-App AI Study Assistant
+ */
+export async function askDocumentAssist(resourceId, prompt, mode = 'summary') {
+  return await apiRequest('/ai/document-assist', {
+    method: 'POST',
+    body: JSON.stringify({ resourceId, prompt, mode })
+  });
+}
