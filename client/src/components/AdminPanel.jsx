@@ -32,7 +32,8 @@ import {
   Lock,
   Unlock,
   Eye,
-  Award
+  Award,
+  HardDrive
 } from 'lucide-react';
 
 const PRESET_THEMES = [
@@ -89,6 +90,7 @@ export default function AdminPanel({ onPendingCountChange }) {
   const [themeColor, setThemeColor] = useState(settings.themeColor || '#2563eb');
   const [storageRoot, setStorageRoot] = useState(settings.storageRoot || 'vault');
   const [folderFormat, setFolderFormat] = useState(settings.folderFormat || '{branch}/{semester}/{subject}/{category}');
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState(settings.maxFileSizeMB || 25);
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Edit modal state
@@ -167,6 +169,7 @@ export default function AdminPanel({ onPendingCountChange }) {
       setThemeColor(settings.themeColor || '#2563eb');
       setStorageRoot(settings.storageRoot || 'vault');
       setFolderFormat(settings.folderFormat || '{branch}/{semester}/{subject}/{category}');
+      setMaxFileSizeMB(settings.maxFileSizeMB || 25);
     }
   }, [settings]);
 
@@ -296,7 +299,8 @@ export default function AdminPanel({ onPendingCountChange }) {
         logoUrl: logoUrl.trim(),
         themeColor,
         storageRoot: storageRoot.trim(),
-        folderFormat: folderFormat.trim()
+        folderFormat: folderFormat.trim(),
+        maxFileSizeMB: parseInt(maxFileSizeMB, 10) || 25
       });
       setActionSuccess('Application settings saved! Updated globally across all pages.');
     } catch (err) {
@@ -1088,6 +1092,63 @@ export default function AdminPanel({ onPendingCountChange }) {
               <p className="text-[11px] text-gray-400 mt-2">
                 Note: Changing conventions applies to future uploads; existing files remain fully accessible through their recorded storage keys.
               </p>
+            </div>
+
+            {/* Upload & File Size Limit Configuration */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <HardDrive className="w-4 h-4 text-purple-600" />
+                <span>Upload & File Size Configuration</span>
+              </h3>
+
+              <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-800 mb-0.5">
+                      Max Allowed File Size (MB)
+                    </label>
+                    <p className="text-[11px] text-gray-500">
+                      Uploaded notes or question papers exceeding this size will be blocked on client & rejected by server.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 self-start sm:self-auto">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={maxFileSizeMB}
+                      onChange={(e) => setMaxFileSizeMB(e.target.value)}
+                      className="w-24 text-sm font-bold text-center p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-xs font-bold text-gray-600">MB</span>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Quick Presets:</span>
+                  {[
+                    { label: '10 MB (Light)', value: 10 },
+                    { label: '25 MB (Standard)', value: 25 },
+                    { label: '50 MB (High)', value: 50 },
+                    { label: '100 MB (Max)', value: 100 }
+                  ].map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => setMaxFileSizeMB(preset.value)}
+                      className={`text-[11px] px-2.5 py-1 rounded-md font-medium transition-all ${
+                        Number(maxFileSizeMB) === preset.value
+                          ? 'bg-purple-700 text-white shadow-xs'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50/50'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Save Button */}

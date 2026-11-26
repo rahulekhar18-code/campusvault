@@ -78,13 +78,14 @@ model Bookmark {
 }
 
 model AppSettings {
-  id           String   @id @default("global")
-  appName      String   @default("CampusVault")
-  logoUrl      String   @default("")
-  themeColor   String   @default("#2563eb")
-  storageRoot  String   @default("vault")
-  folderFormat String   @default("{branch}/{semester}/{subject}/{category}")
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default("global")
+  appName       String   @default("CampusVault")
+  logoUrl       String   @default("")
+  themeColor    String   @default("#2563eb")
+  storageRoot   String   @default("vault")
+  folderFormat  String   @default("{branch}/{semester}/{subject}/{category}")
+  maxFileSizeMB Int      @default(25)
+  updatedAt     DateTime @updatedAt
 
   @@map("app_settings")
 }

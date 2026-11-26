@@ -28,7 +28,7 @@ export async function getSettings(req, res) {
 
 export async function updateSettings(req, res) {
   try {
-    const { appName, logoUrl, themeColor, storageRoot, folderFormat } = req.body;
+    const { appName, logoUrl, themeColor, storageRoot, folderFormat, maxFileSizeMB } = req.body;
 
     const dataToUpdate = {};
     if (typeof appName === 'string' && appName.trim()) dataToUpdate.appName = appName.trim();
@@ -36,6 +36,9 @@ export async function updateSettings(req, res) {
     if (typeof themeColor === 'string' && themeColor.trim()) dataToUpdate.themeColor = themeColor.trim();
     if (typeof storageRoot === 'string' && storageRoot.trim()) dataToUpdate.storageRoot = storageRoot.trim();
     if (typeof folderFormat === 'string' && folderFormat.trim()) dataToUpdate.folderFormat = folderFormat.trim();
+    if (maxFileSizeMB !== undefined && !isNaN(parseInt(maxFileSizeMB))) {
+      dataToUpdate.maxFileSizeMB = Math.max(1, Math.min(100, parseInt(maxFileSizeMB)));
+    }
 
     const updated = await prisma.appSettings.upsert({
       where: { id: 'global' },
@@ -46,7 +49,8 @@ export async function updateSettings(req, res) {
         logoUrl: dataToUpdate.logoUrl || '',
         themeColor: dataToUpdate.themeColor || '#2563eb',
         storageRoot: dataToUpdate.storageRoot || 'vault',
-        folderFormat: dataToUpdate.folderFormat || '{branch}/{semester}/{subject}/{category}'
+        folderFormat: dataToUpdate.folderFormat || '{branch}/{semester}/{subject}/{category}',
+        maxFileSizeMB: dataToUpdate.maxFileSizeMB || 25
       }
     });
 

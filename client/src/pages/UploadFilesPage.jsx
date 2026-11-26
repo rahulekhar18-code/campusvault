@@ -89,10 +89,12 @@ export default function UploadFilesPage() {
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
+      const maxLimitMB = settings?.maxFileSizeMB || 25;
+      const maxBytes = maxLimitMB * 1024 * 1024;
       const selectedList = Array.from(e.target.files);
-      const oversized = selectedList.find(f => f.size > 25 * 1024 * 1024);
+      const oversized = selectedList.find(f => f.size > maxBytes);
       if (oversized) {
-        setUploadError(`File "${oversized.name}" exceeds 25 MB limit.`);
+        setUploadError(`File "${oversized.name}" exceeds admin limit of ${maxLimitMB} MB.`);
         return;
       }
       setFiles(selectedList);
@@ -204,7 +206,9 @@ export default function UploadFilesPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm lg:sticky lg:top-24">
             <h2 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
               <span>File Details</span>
-              <span className="text-[11px] font-normal text-gray-500">Max size: 25MB</span>
+              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                Max size: {settings?.maxFileSizeMB || 25} MB
+              </span>
             </h2>
 
             {uploadError && (

@@ -22,7 +22,8 @@ export function AppSettingsProvider({ children }) {
     logoUrl: '',
     themeColor: '#2563eb',
     storageRoot: 'vault',
-    folderFormat: '{branch}/{semester}/{subject}/{category}'
+    folderFormat: '{branch}/{semester}/{subject}/{category}',
+    maxFileSizeMB: 25
   });
   const [loading, setLoading] = useState(true);
 

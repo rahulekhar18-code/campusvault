@@ -112,6 +112,17 @@ export async function uploadResource(req, res) {
     });
 
     const root = settings?.storageRoot || 'vault';
+    const maxMB = settings?.maxFileSizeMB || 25;
+    const maxBytes = maxMB * 1024 * 1024;
+
+    for (const f of files) {
+      if (f.size > maxBytes) {
+        return res.status(400).json({
+          error: `File "${f.originalname}" (${(f.size / (1024 * 1024)).toFixed(1)} MB) exceeds the administrator limit of ${maxMB} MB.`
+        });
+      }
+    }
+
     let folder = settings?.folderFormat || '{branch}/{semester}/{subject}/{unit}/{category}';
 
     folder = folder
