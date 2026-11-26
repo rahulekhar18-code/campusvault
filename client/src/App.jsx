@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppSettingsProvider } from './context/AppSettingsContext';
 import { AcademicProvider } from './context/AcademicContext';
 import Navbar from './components/Navbar';
+import AnnouncementBanner from './components/AnnouncementBanner';
 import AuthPage from './pages/AuthPage';
 import ReadFilesPage from './pages/ReadFilesPage';
 import UploadFilesPage from './pages/UploadFilesPage';
@@ -50,6 +51,7 @@ function AppContent() {
         setCurrentPage={setCurrentPage}
         pendingCount={pendingCount}
       />
+      <AnnouncementBanner />
 
       <main className="flex-1 pb-16 md:pb-0">
         {/* Page 2: Read Files */}

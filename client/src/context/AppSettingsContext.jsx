@@ -23,7 +23,14 @@ export function AppSettingsProvider({ children }) {
     themeColor: '#2563eb',
     storageRoot: 'vault',
     folderFormat: '{branch}/{semester}/{subject}/{category}',
-    maxFileSizeMB: 25
+    maxFileSizeMB: 25,
+    announcementText: '',
+    announcementEnabled: false,
+    announcementType: 'info',
+    autoApproveUploads: false,
+    defaultLockMode: false,
+    allowedEmailDomains: 'ycce.in',
+    preventScreenCapture: true
   });
   const [loading, setLoading] = useState(true);
 

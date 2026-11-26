@@ -1,5 +1,6 @@
 import { prisma } from '../config/db.js';
 import { sendResourceDigestEmail } from '../utils/emailService.js';
+import { deletePrivateFile } from '../config/storage.js';
 
 /**
  * Get all files awaiting approval
@@ -302,5 +303,52 @@ export async function sendResourceDigest(req, res) {
   } catch (error) {
     console.error('sendResourceDigest error:', error);
     return res.status(500).json({ error: 'Failed to send resource digest' });
+  }
+}
+
+/**
+ * Purge orphan and rejected files to reclaim cloud storage space
+ */
+export async function purgeOrphanStorage(req, res) {
+  try {
+    const rejected = await prisma.resource.findMany({
+      where: { status: 'REJECTED' }
+    });
+
+    let purgedCount = 0;
+    let freedBytes = 0;
+
+    for (const r of rejected) {
+      try {
+        if (r.storageKey) {
+          await deletePrivateFile(r.storageKey);
+        }
+        freedBytes += (r.fileSize || 0);
+        purgedCount++;
+      } catch (e) {
+        console.warn(`Failed to delete storage file ${r.storageKey}:`, e);
+      }
+    }
+
+    if (rejected.length > 0) {
+      await prisma.resource.deleteMany({
+        where: { status: 'REJECTED' }
+      });
+    }
+
+    const freedMB = (freedBytes / (1024 * 1024)).toFixed(2);
+
+    return res.json({
+      success: true,
+      purgedCount,
+      freedBytes,
+      freedMB,
+      message: purgedCount > 0 
+        ? `Successfully purged ${purgedCount} rejected file(s) and freed ${freedMB} MB of cloud storage.`
+        : 'Storage is clean! No unreferenced or rejected files found.'
+    });
+  } catch (error) {
+    console.error('purgeOrphanStorage error:', error);
+    return res.status(500).json({ error: 'Failed to purge storage: ' + error.message });
   }
 }

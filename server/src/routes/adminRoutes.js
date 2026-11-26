@@ -7,7 +7,8 @@ import {
   rejectResource,
   toggleResourceLock,
   toggleVerificationBadge,
-  sendResourceDigest
+  sendResourceDigest,
+  purgeOrphanStorage
 } from '../controllers/adminController.js';
 import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
 
@@ -24,5 +25,6 @@ router.patch('/resources/:id/reject', rejectResource);
 router.patch('/resources/:id/toggle-lock', toggleResourceLock);
 router.patch('/resources/:id/verification', toggleVerificationBadge);
 router.post('/send-digest', sendResourceDigest);
+router.post('/storage/purge-orphans', purgeOrphanStorage);
 
 export default router;

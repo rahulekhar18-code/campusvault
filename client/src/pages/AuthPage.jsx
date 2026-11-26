@@ -40,6 +40,19 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const allowedDomains = (settings?.allowedEmailDomains || 'ycce.in')
+    .split(',')
+    .map(d => d.trim().toLowerCase().replace(/^@/, ''))
+    .filter(Boolean);
+
+  const isEmailValidDomain = (testEmail) => {
+    if (!testEmail) return false;
+    const clean = testEmail.trim().toLowerCase();
+    return allowedDomains.some(d => clean.endsWith(`@${d}`));
+  };
+
+  const domainLabel = allowedDomains.map(d => `@${d}`).join(', ');
+
   // Load saved accounts & remembered email on mount
   useEffect(() => {
     try {
@@ -120,8 +133,8 @@ export default function AuthPage() {
     setSuccess('');
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@ycce.in')) {
-      setError('Registration is restricted: Only @ycce.in college emails are allowed');
+    if (!isEmailValidDomain(cleanEmail)) {
+      setError(`Registration is restricted: Only college emails (${domainLabel}) are allowed`);
       return;
     }
 
@@ -144,8 +157,8 @@ export default function AuthPage() {
     setSuccess('');
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@ycce.in')) {
-      setError('Only verified @ycce.in emails can register');
+    if (!isEmailValidDomain(cleanEmail)) {
+      setError(`Only verified college emails (${domainLabel}) can register`);
       return;
     }
     if (!otp.trim()) {
@@ -175,8 +188,8 @@ export default function AuthPage() {
     setSuccess('');
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@ycce.in')) {
-      setError('Please use your college email ending in @ycce.in');
+    if (!isEmailValidDomain(cleanEmail)) {
+      setError(`Please use your official college email (${domainLabel})`);
       return;
     }
     if (!password) {
@@ -202,8 +215,8 @@ export default function AuthPage() {
     setSuccess('');
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@ycce.in')) {
-      setError('Please enter your official college email ending in @ycce.in');
+    if (!isEmailValidDomain(cleanEmail)) {
+      setError(`Please enter your official college email (${domainLabel})`);
       return;
     }
 
@@ -226,8 +239,8 @@ export default function AuthPage() {
     setSuccess('');
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@ycce.in')) {
-      setError('Only verified @ycce.in emails are allowed');
+    if (!isEmailValidDomain(cleanEmail)) {
+      setError(`Only verified college emails (${domainLabel}) are allowed`);
       return;
     }
     if (!otp.trim()) {
@@ -294,7 +307,7 @@ export default function AuthPage() {
           </h2>
           <div className="mt-1.5 inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Only @ycce.in Verified Emails</span>
+            <span>Official College Emails ({domainLabel})</span>
           </div>
         </div>
 

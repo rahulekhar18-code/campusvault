@@ -78,14 +78,21 @@ model Bookmark {
 }
 
 model AppSettings {
-  id            String   @id @default("global")
-  appName       String   @default("CampusVault")
-  logoUrl       String   @default("")
-  themeColor    String   @default("#2563eb")
-  storageRoot   String   @default("vault")
-  folderFormat  String   @default("{branch}/{semester}/{subject}/{category}")
-  maxFileSizeMB Int      @default(25)
-  updatedAt     DateTime @updatedAt
+  id                    String   @id @default("global")
+  appName               String   @default("CampusVault")
+  logoUrl               String   @default("")
+  themeColor            String   @default("#2563eb")
+  storageRoot           String   @default("vault")
+  folderFormat          String   @default("{branch}/{semester}/{subject}/{category}")
+  maxFileSizeMB         Int      @default(25)
+  announcementText      String   @default("")
+  announcementEnabled   Boolean  @default(false)
+  announcementType      String   @default("info") // "info" | "warning" | "success"
+  autoApproveUploads    Boolean  @default(false)  // Fast exam mode
+  defaultLockMode       Boolean  @default(false)  // In-app read-only default
+  allowedEmailDomains   String   @default("ycce.in") // Comma-separated college domains
+  preventScreenCapture  Boolean  @default(true)   // Anti-screenshot & DRM shield
+  updatedAt             DateTime @updatedAt
 
   @@map("app_settings")
 }

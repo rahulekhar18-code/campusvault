@@ -193,3 +193,12 @@ export async function toggleBookmark(resourceId) {
     method: 'POST'
   });
 }
+
+/**
+ * 1-Click Cloud Storage Orphan Purge
+ */
+export async function purgeOrphanStorage() {
+  return await apiRequest('/admin/storage/purge-orphans', {
+    method: 'POST'
+  });
+}

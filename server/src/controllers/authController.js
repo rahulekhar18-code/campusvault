@@ -7,11 +7,31 @@ const JWT_SECRET = process.env.JWT_SECRET || 'campusvault_super_secret_jwt_key_2
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '24071279@ycce.in').toLowerCase();
 
 /**
- * Validates that an email belongs to the college domain @ycce.in
+ * Retrieves list of allowed email domains from AppSettings (defaulting to ycce.in)
  */
-export function isCollegeEmail(email) {
+export async function getAllowedDomains() {
+  try {
+    const settings = await prisma.appSettings.findUnique({ where: { id: 'global' } });
+    if (settings && settings.allowedEmailDomains) {
+      return settings.allowedEmailDomains
+        .split(',')
+        .map(d => d.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean);
+    }
+  } catch (err) {
+    console.error('Failed to get allowed domains from settings:', err);
+  }
+  return ['ycce.in'];
+}
+
+/**
+ * Validates that an email belongs to configured allowed college domains
+ */
+export async function isCollegeEmail(email) {
   if (!email || typeof email !== 'string') return false;
-  return email.trim().toLowerCase().endsWith('@ycce.in');
+  const cleanEmail = email.trim().toLowerCase();
+  const allowed = await getAllowedDomains();
+  return allowed.some(domain => cleanEmail.endsWith(`@${domain}`));
 }
 
 /**
@@ -26,9 +46,10 @@ export async function sendOtp(req, res) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!isCollegeEmail(cleanEmail)) {
+    if (!(await isCollegeEmail(cleanEmail))) {
+      const allowed = await getAllowedDomains();
       return res.status(400).json({
-        error: 'Registration restricted: Only official @ycce.in emails are permitted'
+        error: `Registration restricted: Only official college emails (${allowed.map(d => '@' + d).join(', ')}) are permitted`
       });
     }
 
@@ -91,8 +112,9 @@ export async function register(req, res) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!isCollegeEmail(cleanEmail)) {
-      return res.status(400).json({ error: 'Only official @ycce.in emails are allowed' });
+    if (!(await isCollegeEmail(cleanEmail))) {
+      const allowed = await getAllowedDomains();
+      return res.status(400).json({ error: `Only official college emails (${allowed.map(d => '@' + d).join(', ')}) are allowed` });
     }
 
     if (password.length < 6) {
@@ -171,8 +193,9 @@ export async function login(req, res) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!isCollegeEmail(cleanEmail)) {
-      return res.status(400).json({ error: 'Access restricted to @ycce.in college accounts' });
+    if (!(await isCollegeEmail(cleanEmail))) {
+      const allowed = await getAllowedDomains();
+      return res.status(400).json({ error: `Access restricted to official college accounts (${allowed.map(d => '@' + d).join(', ')})` });
     }
 
     const user = await prisma.user.findUnique({
@@ -242,8 +265,9 @@ export async function forgotPasswordSendOtp(req, res) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!isCollegeEmail(cleanEmail)) {
-      return res.status(400).json({ error: 'Only official @ycce.in college emails are permitted' });
+    if (!(await isCollegeEmail(cleanEmail))) {
+      const allowed = await getAllowedDomains();
+      return res.status(400).json({ error: `Only official college emails (${allowed.map(d => '@' + d).join(', ')}) are permitted` });
     }
 
     const user = await prisma.user.findUnique({
@@ -292,8 +316,9 @@ export async function resetPassword(req, res) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!isCollegeEmail(cleanEmail)) {
-      return res.status(400).json({ error: 'Only official @ycce.in emails are allowed' });
+    if (!(await isCollegeEmail(cleanEmail))) {
+      const allowed = await getAllowedDomains();
+      return res.status(400).json({ error: `Only official college emails (${allowed.map(d => '@' + d).join(', ')}) are allowed` });
     }
 
     if (newPassword.length < 6) {

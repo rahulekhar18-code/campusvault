@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile, toggleResourceLock, toggleVerificationBadge, sendResourceDigest, previewFile } from '../api/client';
+import { apiRequest, downloadFile, toggleResourceLock, toggleVerificationBadge, sendResourceDigest, previewFile, purgeOrphanStorage } from '../api/client';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import EditResourceModal from './EditResourceModal';
@@ -33,7 +33,14 @@ import {
   Unlock,
   Eye,
   Award,
-  HardDrive
+  HardDrive,
+  Megaphone,
+  Bell,
+  Zap,
+  ShieldAlert,
+  Globe,
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 
 const PRESET_THEMES = [
@@ -91,6 +98,15 @@ export default function AdminPanel({ onPendingCountChange }) {
   const [storageRoot, setStorageRoot] = useState(settings.storageRoot || 'vault');
   const [folderFormat, setFolderFormat] = useState(settings.folderFormat || '{branch}/{semester}/{subject}/{category}');
   const [maxFileSizeMB, setMaxFileSizeMB] = useState(settings.maxFileSizeMB || 25);
+  const [announcementText, setAnnouncementText] = useState(settings.announcementText || '');
+  const [announcementEnabled, setAnnouncementEnabled] = useState(settings.announcementEnabled || false);
+  const [announcementType, setAnnouncementType] = useState(settings.announcementType || 'info');
+  const [autoApproveUploads, setAutoApproveUploads] = useState(settings.autoApproveUploads || false);
+  const [defaultLockMode, setDefaultLockMode] = useState(settings.defaultLockMode || false);
+  const [allowedEmailDomains, setAllowedEmailDomains] = useState(settings.allowedEmailDomains || 'ycce.in');
+  const [preventScreenCapture, setPreventScreenCapture] = useState(settings.preventScreenCapture !== false);
+  const [purgingStorage, setPurgingStorage] = useState(false);
+  const [purgeResult, setPurgeResult] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Edit modal state
@@ -170,6 +186,13 @@ export default function AdminPanel({ onPendingCountChange }) {
       setStorageRoot(settings.storageRoot || 'vault');
       setFolderFormat(settings.folderFormat || '{branch}/{semester}/{subject}/{category}');
       setMaxFileSizeMB(settings.maxFileSizeMB || 25);
+      setAnnouncementText(settings.announcementText || '');
+      setAnnouncementEnabled(settings.announcementEnabled || false);
+      setAnnouncementType(settings.announcementType || 'info');
+      setAutoApproveUploads(settings.autoApproveUploads || false);
+      setDefaultLockMode(settings.defaultLockMode || false);
+      setAllowedEmailDomains(settings.allowedEmailDomains || 'ycce.in');
+      setPreventScreenCapture(settings.preventScreenCapture !== false);
     }
   }, [settings]);
 
@@ -300,13 +323,39 @@ export default function AdminPanel({ onPendingCountChange }) {
         themeColor,
         storageRoot: storageRoot.trim(),
         folderFormat: folderFormat.trim(),
-        maxFileSizeMB: parseInt(maxFileSizeMB, 10) || 25
+        maxFileSizeMB: parseInt(maxFileSizeMB, 10) || 25,
+        announcementText: announcementText.trim(),
+        announcementEnabled,
+        announcementType,
+        autoApproveUploads,
+        defaultLockMode,
+        allowedEmailDomains: allowedEmailDomains.trim().toLowerCase(),
+        preventScreenCapture
       });
       setActionSuccess('Application settings saved! Updated globally across all pages.');
     } catch (err) {
       setActionError(err.message || 'Failed to save application settings');
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handlePurgeStorage = async () => {
+    if (!window.confirm('Clean unused and rejected files from cloud storage? This reclaims storage capacity permanently.')) {
+      return;
+    }
+    setPurgingStorage(true);
+    setPurgeResult('');
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await purgeOrphanStorage();
+      setPurgeResult(res.message || 'Storage cleanup complete!');
+      setActionSuccess(res.message || 'Storage cleaned successfully!');
+    } catch (err) {
+      setActionError(err.message || 'Failed to purge orphan storage');
+    } finally {
+      setPurgingStorage(false);
     }
   };
 
@@ -1148,6 +1197,215 @@ export default function AdminPanel({ onPendingCountChange }) {
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Campus Notice & Announcement Banner */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <Megaphone className="w-4 h-4 text-blue-600" />
+                <span>Campus Announcement & Exam Notice Banner</span>
+              </h3>
+
+              <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-gray-800">
+                      Enable Notice Banner
+                    </label>
+                    <p className="text-[11px] text-gray-500">
+                      Displays a prominent notification strip across all student pages.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={announcementEnabled}
+                    onChange={(e) => setAnnouncementEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-purple-600 cursor-pointer rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Announcement Notice Text
+                  </label>
+                  <input
+                    type="text"
+                    value={announcementText}
+                    onChange={(e) => setAnnouncementText(e.target.value)}
+                    placeholder="e.g., Mid-Sem 2025 PYQs uploaded for 3rd & 5th Sem! All the best for exams."
+                    className="w-full text-sm p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                    Banner Style Category
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    {[
+                      { key: 'info', label: 'Info (Blue)' },
+                      { key: 'warning', label: 'Exam Alert (Amber)' },
+                      { key: 'success', label: 'Notice / Event (Green)' }
+                    ].map((st) => (
+                      <button
+                        key={st.key}
+                        type="button"
+                        onClick={() => setAnnouncementType(st.key)}
+                        className={`text-[11px] px-2.5 py-1 rounded-md font-semibold transition ${
+                          announcementType === st.key
+                            ? 'bg-purple-700 text-white'
+                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Exam Mode: Auto-Approval & Access Controls */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <span>Upload Approval & Document Access Modes</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Auto-Approval Mode */}
+                <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-gray-800">Exam Mode: Auto-Approve</span>
+                      <input
+                        type="checkbox"
+                        checked={autoApproveUploads}
+                        onChange={(e) => setAutoApproveUploads(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600 cursor-pointer rounded"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      When active, student uploads bypass the admin queue and publish instantly for fast exam preparation.
+                    </p>
+                  </div>
+                  <span className={`mt-2 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full self-start ${
+                    autoApproveUploads ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {autoApproveUploads ? '⚡ Fast Exam Mode ON' : 'Standard Admin Queue'}
+                  </span>
+                </div>
+
+                {/* Default Read-Only Lock Mode */}
+                <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-gray-800">Default In-App Read Only</span>
+                      <input
+                        type="checkbox"
+                        checked={defaultLockMode}
+                        onChange={(e) => setDefaultLockMode(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600 cursor-pointer rounded"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      When active, new uploads are locked to the In-App Reader with watermarking by default.
+                    </p>
+                  </div>
+                  <span className={`mt-2 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full self-start ${
+                    defaultLockMode ? 'bg-purple-100 text-purple-800' : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {defaultLockMode ? '🔒 Locked by Default' : 'Open Download Default'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Anti-Screenshot & Screen Capture Protection (DRM Shield) */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <ShieldAlert className="w-4 h-4 text-red-600" />
+                <span>Anti-Screenshot & Screen Recording Protection (DRM Shield)</span>
+              </h3>
+
+              <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-gray-800">
+                      Block Screenshots & Screen Recording
+                    </label>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Disables PrintScreen, Ctrl+P print-to-pdf, right-click menu, blurs the screen when inactive or recording tools are detected, and stamps dynamic user email watermarks.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={preventScreenCapture}
+                    onChange={(e) => setPreventScreenCapture(e.target.checked)}
+                    className="w-5 h-5 accent-red-600 cursor-pointer rounded flex-shrink-0 ml-3"
+                  />
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-gray-200 flex items-center space-x-2 text-[10px] text-gray-500">
+                  <span className="font-semibold text-gray-700">Security Layer:</span>
+                  <span>Clipboard Clear on Capture • Focus Blur Shield • Anti-Print CSS • Dynamic Student Watermark</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Allowed College Email Domains */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <Globe className="w-4 h-4 text-emerald-600" />
+                <span>Allowed College Registration Domains</span>
+              </h3>
+
+              <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Allowed Email Domains (Comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={allowedEmailDomains}
+                  onChange={(e) => setAllowedEmailDomains(e.target.value)}
+                  placeholder="ycce.in, ycce.edu"
+                  className="w-full text-sm font-mono p-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <p className="text-[11px] text-gray-400 mt-1.5">
+                  Only students with email addresses ending in these domains will be permitted to create accounts or sign in.
+                </p>
+              </div>
+            </div>
+
+            {/* Storage Maintenance & 1-Click Orphan Purge */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3 flex items-center space-x-1.5">
+                <Trash2 className="w-4 h-4 text-red-500" />
+                <span>Cloud Storage Maintenance & Orphan Cleanup</span>
+              </h3>
+
+              <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-gray-800">Purge Rejected & Unused Files</h4>
+                  <p className="text-[11px] text-gray-500">
+                    Permanently removes rejected uploads from Supabase storage and reclaims storage quota.
+                  </p>
+                  {purgeResult && (
+                    <p className="text-xs font-semibold text-emerald-700 mt-1 bg-emerald-50 p-1.5 rounded border border-emerald-200">
+                      {purgeResult}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handlePurgeStorage}
+                  disabled={purgingStorage}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center space-x-1.5 transition disabled:opacity-50 flex-shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{purgingStorage ? 'Purging...' : 'Clean Unused Files'}</span>
+                </button>
               </div>
             </div>
 

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchResourceBlob, askDocumentAssist } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useAppSettings } from '../context/AppSettingsContext';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 import { renderAsync } from 'docx-preview';
 import mammoth from 'mammoth';
 import { 
   X, Maximize2, Minimize2, ZoomIn, ZoomOut, BookOpen, 
   Lock, AlertCircle, FileText, Loader2, Sparkles, Send, 
-  Copy, Check, MessageSquare, Award, ShieldCheck, ExternalLink 
+  Copy, Check, MessageSquare, Award, ShieldCheck, ExternalLink,
+  ShieldAlert
 } from 'lucide-react';
 
 // Configure PDF.js worker
@@ -17,6 +19,7 @@ if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
 
 export default function DocumentReaderModal({ resource, onClose }) {
   const { user } = useAuth();
+  const { settings } = useAppSettings();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fileType, setFileType] = useState(null); // 'pdf' | 'docx' | 'image' | 'text' | 'unsupported'
@@ -24,6 +27,11 @@ export default function DocumentReaderModal({ resource, onClose }) {
   const [textContent, setTextContent] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Anti-Screenshot & Screen Capture Protection State
+  const [isWindowFocused, setIsWindowFocused] = useState(true);
+  const [securityAlert, setSecurityAlert] = useState('');
+  const isProtected = settings?.preventScreenCapture !== false;
 
   // PDF Rendering State
   const [pdfRendering, setPdfRendering] = useState(false);
@@ -209,6 +217,84 @@ export default function DocumentReaderModal({ resource, onClose }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, aiOpen]);
 
+  // Anti-Screenshot & Screen Capture Protection Listeners
+  useEffect(() => {
+    if (!isProtected) return;
+
+    // 1. Intercept Screenshot / Print shortcuts & clear clipboard
+    const handleKeyIntercept = (e) => {
+      // PrintScreen key
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText('');
+          }
+        } catch (_) {}
+        setSecurityAlert('⚠️ Screenshot is disabled by College Security Policy');
+        setTimeout(() => setSecurityAlert(''), 3500);
+        return false;
+      }
+
+      // Ctrl+P / Cmd+P (Print to PDF)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        setSecurityAlert('⚠️ Printing is disabled for protected notes');
+        setTimeout(() => setSecurityAlert(''), 3500);
+        return false;
+      }
+
+      // Ctrl+S / Cmd+S (Save webpage)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Ctrl+Shift+I / Ctrl+Shift+C / Ctrl+Shift+J (DevTools)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'i', 'C', 'c', 'J', 'j'].includes(e.key)) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Ctrl+U / Cmd+U (View Source)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // 2. Window Blur / Tab switch / Background Screen Recorder Shield
+    const handleWindowBlur = () => {
+      setIsWindowFocused(false);
+    };
+
+    const handleWindowFocus = () => {
+      setIsWindowFocused(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsWindowFocused(false);
+      } else {
+        setIsWindowFocused(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyIntercept, true);
+    window.addEventListener('keyup', handleKeyIntercept, true);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyIntercept, true);
+      window.removeEventListener('keyup', handleKeyIntercept, true);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isProtected]);
+
   // AI Assistant trigger
   const handleAiAction = async (mode, customPrompt = '') => {
     setAiLoading(true);
@@ -342,16 +428,61 @@ export default function DocumentReaderModal({ resource, onClose }) {
           </div>
         </div>
 
+        {/* Print Protection Stylesheet */}
+        {isProtected && (
+          <style>{`
+            @media print {
+              body, #root, .fixed {
+                display: none !important;
+              }
+            }
+          `}</style>
+        )}
+
+        {/* Security Warning Toast */}
+        {securityAlert && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-full shadow-2xl flex items-center space-x-2 animate-bounce">
+            <ShieldAlert className="w-4 h-4" />
+            <span>{securityAlert}</span>
+          </div>
+        )}
+
         {/* Reader Workspace (Split Layout on desktop, overlay on mobile) */}
-        <div className="flex-1 bg-gray-950 overflow-hidden relative flex flex-row">
+        <div 
+          className="flex-1 bg-gray-950 overflow-hidden relative flex flex-row select-none"
+          onContextMenu={(e) => { if (isProtected) e.preventDefault(); }}
+        >
           {/* Main Document Viewport */}
           <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
+            {/* Window Unfocused / Screen-Recording Shield Overlay */}
+            {!isWindowFocused && isProtected && (
+              <div 
+                className="absolute inset-0 z-40 bg-gray-950/95 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-6 space-y-3 cursor-pointer"
+                onClick={() => setIsWindowFocused(true)}
+              >
+                <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center animate-pulse">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-white">Content Shield Active</h4>
+                <p className="text-xs text-gray-400 max-w-sm">
+                  Document display is suspended while the window is inactive or a recording utility is active.
+                </p>
+                <button 
+                  type="button"
+                  onClick={() => setIsWindowFocused(true)}
+                  className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-sm transition"
+                >
+                  Click to Resume Viewing
+                </button>
+              </div>
+            )}
+
             {/* Dynamic Anti-Leak Security Watermark Overlay */}
-            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.05] sm:opacity-[0.06] rotate-[-22deg] scale-125">
-              {[...Array(7)].map((_, i) => (
+            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.06] sm:opacity-[0.08] rotate-[-22deg] scale-125">
+              {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex justify-around whitespace-nowrap text-xs font-mono font-bold tracking-widest text-white uppercase">
                   <span>CampusVault • {user?.email || 'YCCE Student'}</span>
-                  <span>CampusVault • {user?.email || 'YCCE Student'}</span>
+                  <span>CONFIDENTIAL • {user?.email || 'YCCE Student'}</span>
                   <span>CampusVault • {user?.email || 'YCCE Student'}</span>
                 </div>
               ))}

@@ -132,8 +132,10 @@ export async function uploadResource(req, res) {
       .replace('{unit}', sanitizePathSegment(assignedUnit))
       .replace('{category}', sanitizePathSegment(category));
 
-    // Initial approval status: Admin uploads are auto-approved, student uploads are pending
-    const initialStatus = req.user.role === 'ADMIN' ? 'APPROVED' : 'PENDING';
+    // Initial approval status: Admin uploads or exam-mode auto-approvals are approved, otherwise pending
+    const isAutoApprove = req.user.role === 'ADMIN' || Boolean(settings?.autoApproveUploads);
+    const initialStatus = isAutoApprove ? 'APPROVED' : 'PENDING';
+    const defaultLocked = settings?.defaultLockMode ?? false;
 
     const createdResources = [];
 
@@ -166,6 +168,7 @@ export async function uploadResource(req, res) {
           fileSize: file.size,
           mimeType: file.mimetype,
           status: initialStatus,
+          isLocked: defaultLocked,
           uploaderId: req.user.id
         },
         include: {
