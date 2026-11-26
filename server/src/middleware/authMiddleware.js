@@ -19,7 +19,9 @@ export async function authenticateToken(req, res, next) {
         id: true,
         email: true,
         role: true,
-        isVerified: true
+        isVerified: true,
+        credits: true,
+        referralCode: true
       }
     });
 

@@ -9,14 +9,17 @@ import TermsModal from './components/TermsModal';
 import AuthPage from './pages/AuthPage';
 import ReadFilesPage from './pages/ReadFilesPage';
 import UploadFilesPage from './pages/UploadFilesPage';
+import UnlockHubPage from './pages/UnlockHubPage';
 import AdminPanel from './components/AdminPanel';
+import RewardsModal from './components/RewardsModal';
 import { apiRequest } from './api/client';
 
 function AppContent() {
-  const { user, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState('read'); // 'read' | 'upload' | 'admin'
+  const { user, setUser, refreshUser, loading } = useAuth();
+  const [currentPage, setCurrentPage] = useState('read'); // 'read' | 'bookmarks' | 'unlock-hub' | 'upload' | 'admin'
   const [pendingCount, setPendingCount] = useState(0);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
 
   // Poll or fetch pending count for admin badge
   useEffect(() => {
@@ -53,16 +56,29 @@ function AppContent() {
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         pendingCount={pendingCount}
+        onOpenRewards={() => setShowRewardsModal(true)}
       />
       <InstallAppBanner />
       <AnnouncementBanner />
 
       <main className="flex-1 pb-16 md:pb-0">
         {/* Page 2: Read Files */}
-        {currentPage === 'read' && <ReadFilesPage />}
+        {currentPage === 'read' && (
+          <ReadFilesPage onOpenRewards={() => setShowRewardsModal(true)} />
+        )}
 
         {/* Page 2.5: Bookmarked Notes / Exam Pocket */}
-        {currentPage === 'bookmarks' && <ReadFilesPage isBookmarksOnly={true} />}
+        {currentPage === 'bookmarks' && (
+          <ReadFilesPage isBookmarksOnly={true} onOpenRewards={() => setShowRewardsModal(true)} />
+        )}
+
+        {/* Page 2.8: Dedicated Unlock Hub (Separated from Bookmarks) */}
+        {currentPage === 'unlock-hub' && (
+          <UnlockHubPage
+            onNavigate={setCurrentPage}
+            onOpenRewards={() => setShowRewardsModal(true)}
+          />
+        )}
 
         {/* Page 3: Upload Files */}
         {currentPage === 'upload' && <UploadFilesPage />}
@@ -87,6 +103,19 @@ function AppContent() {
       </footer>
 
       <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+
+      {/* Rewards & WhatsApp Referrals Modal */}
+      {showRewardsModal && (
+        <RewardsModal
+          user={user}
+          onClose={() => setShowRewardsModal(false)}
+          onCreditsUpdated={(newCredits) => {
+            if (setUser) {
+              setUser(prev => ({ ...prev, credits: newCredits }));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

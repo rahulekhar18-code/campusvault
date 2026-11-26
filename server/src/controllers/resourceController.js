@@ -63,6 +63,8 @@ export async function getApprovedResources(req, res) {
         fileSize: true,
         mimeType: true,
         isLocked: true,
+        isStrictLock: true,
+        creditCost: true,
         isTopperVerified: true,
         isProfVerified: true,
         createdAt: true,
@@ -72,6 +74,10 @@ export async function getApprovedResources(req, res) {
         bookmarks: req.user?.id ? {
           where: { userId: req.user.id },
           select: { id: true }
+        } : false,
+        unlockedBy: req.user?.id ? {
+          where: { userId: req.user.id },
+          select: { id: true, creditsSpent: true }
         } : false
       }
     });
@@ -79,7 +85,9 @@ export async function getApprovedResources(req, res) {
     const mapped = resources.map((item) => ({
       ...item,
       isBookmarked: Array.isArray(item.bookmarks) && item.bookmarks.length > 0,
-      bookmarks: undefined
+      isUnlockedByMe: Array.isArray(item.unlockedBy) && item.unlockedBy.length > 0,
+      bookmarks: undefined,
+      unlockedBy: undefined
     }));
 
     return res.json(mapped);
@@ -179,6 +187,17 @@ export async function uploadResource(req, res) {
       });
 
       createdResources.push(resource);
+    }
+
+    if (initialStatus === 'APPROVED' && req.user?.id) {
+      try {
+        await prisma.user.update({
+          where: { id: req.user.id },
+          data: { credits: { increment: 20 * createdResources.length } }
+        });
+      } catch (credErr) {
+        console.warn('Could not increment credits for approved upload:', credErr.message);
+      }
     }
 
     return res.status(201).json({
@@ -289,6 +308,8 @@ export async function updateResource(req, res) {
         storageKey,
         ...(isAdmin && status ? { status } : {}),
         ...(isAdmin && typeof req.body.isLocked === 'boolean' ? { isLocked: req.body.isLocked } : {}),
+        ...(isAdmin && typeof req.body.isStrictLock === 'boolean' ? { isStrictLock: req.body.isStrictLock } : {}),
+        ...(isAdmin && req.body.creditCost !== undefined ? { creditCost: Math.max(0, parseInt(req.body.creditCost, 10) || 0) } : {}),
         ...(isAdmin && typeof req.body.isTopperVerified === 'boolean' ? { isTopperVerified: req.body.isTopperVerified } : {}),
         ...(isAdmin && typeof req.body.isProfVerified === 'boolean' ? { isProfVerified: req.body.isProfVerified } : {})
       }
@@ -377,11 +398,22 @@ export async function downloadResource(req, res) {
 
     const mode = req.query.mode || 'download'; // 'download' | 'preview'
 
-    // If resource is locked (read-only): students can preview/read, but offline download is restricted
+    // If resource is locked: allow download if admin, owner, or already unlocked with credits
     if (resource.isLocked && !isAdmin && !isOwner && mode === 'download') {
-      return res.status(403).json({
-        error: 'This resource is locked for in-app reading only. Direct offline download is restricted by admin.'
+      const isUnlocked = await prisma.unlockedResource.findUnique({
+        where: {
+          userId_resourceId: {
+            userId: req.user.id,
+            resourceId: id
+          }
+        }
       });
+
+      if (!isUnlocked) {
+        return res.status(403).json({
+          error: 'This resource is locked. Unlock it in CampusVault with study credits to enable direct download!'
+        });
+      }
     }
 
     const buffer = await downloadPrivateFile(resource.storageKey);
@@ -451,5 +483,147 @@ export async function toggleBookmark(req, res) {
   } catch (error) {
     console.error('toggleBookmark error:', error);
     return res.status(500).json({ error: 'Failed to toggle bookmark' });
+  }
+}
+
+/**
+ * Unlock a locked resource with user credits (Atomic Transaction)
+ */
+export async function unlockResource(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Run within atomic transaction to guarantee credit safety & idempotency
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check if already unlocked
+      const existingUnlock = await tx.unlockedResource.findUnique({
+        where: {
+          userId_resourceId: {
+            userId,
+            resourceId: id
+          }
+        }
+      });
+
+      if (existingUnlock) {
+        const user = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
+        return {
+          success: true,
+          alreadyUnlocked: true,
+          creditsRemaining: user?.credits ?? 0,
+          message: 'Resource is already unlocked in your Unlock Hub!'
+        };
+      }
+
+      // 2. Fetch resource & check validity
+      const resource = await tx.resource.findUnique({
+        where: { id }
+      });
+
+      if (!resource) {
+        throw new Error('Resource not found');
+      }
+
+      // Check if file is strictly locked by admin
+      if (resource.isStrictLock) {
+        throw new Error('This file is strictly protected by administration and cannot be unlocked.');
+      }
+
+      // If file is not locked, it's free
+      if (!resource.isLocked) {
+        const user = await tx.user.findUnique({ where: { id: userId }, select: { credits: true } });
+        return {
+          success: true,
+          alreadyUnlocked: true,
+          creditsRemaining: user?.credits ?? 0,
+          message: 'This file is free for all students!'
+        };
+      }
+
+      const cost = Math.max(1, resource.creditCost || 10);
+
+      // 3. Atomically check balance & deduct credits
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { credits: true, email: true }
+      });
+
+      if (!user || user.credits < cost) {
+        throw new Error(`Insufficient credits. You need ${cost} credits (Current balance: ${user?.credits || 0} credits). Invite batchmates on WhatsApp to earn +25 credits!`);
+      }
+
+      // Atomically decrement
+      const updatedUser = await tx.user.update({
+        where: {
+          id: userId,
+          credits: { gte: cost } // Extra DB-level safety constraint
+        },
+        data: {
+          credits: { decrement: cost }
+        },
+        select: { credits: true }
+      });
+
+      // 4. Create UnlockedResource record
+      await tx.unlockedResource.create({
+        data: {
+          userId,
+          resourceId: id,
+          creditsSpent: cost
+        }
+      });
+
+      return {
+        success: true,
+        alreadyUnlocked: false,
+        cost,
+        creditsRemaining: updatedUser.credits,
+        message: `File unlocked successfully! ${cost} credits deducted.`,
+        resource
+      };
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('unlockResource error:', error);
+    return res.status(400).json({ error: error.message || 'Failed to unlock resource' });
+  }
+}
+
+/**
+ * Get all resources unlocked by currently logged-in student (For Unlock Hub)
+ */
+export async function getUnlockedResources(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const unlocks = await prisma.unlockedResource.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        resource: {
+          include: {
+            uploader: {
+              select: { email: true }
+            }
+          }
+        }
+      }
+    });
+
+    const resources = unlocks
+      .filter(u => u.resource && u.resource.status === 'APPROVED')
+      .map(u => ({
+        ...u.resource,
+        isUnlockedByMe: true,
+        unlockedAt: u.createdAt,
+        creditsSpent: u.creditsSpent
+      }));
+
+    return res.json(resources);
+  } catch (error) {
+    console.error('getUnlockedResources error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve unlocked resources' });
   }
 }

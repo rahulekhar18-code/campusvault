@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/db.js';
@@ -104,7 +105,7 @@ export async function sendOtp(req, res) {
  */
 export async function register(req, res) {
   try {
-    const { email, password, otp } = req.body;
+    const { email, password, otp, ref } = req.body;
 
     if (!email || !password || !otp) {
       return res.status(400).json({ error: 'Email, password, and OTP are required' });
@@ -144,6 +145,35 @@ export async function register(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const assignedRole = cleanEmail === ADMIN_EMAIL ? 'ADMIN' : 'STUDENT';
 
+    // Generate unique referral code for student
+    let referralCode = user.referralCode;
+    if (!referralCode) {
+      referralCode = 'CV-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    }
+
+    // Process referral reward if valid ref code provided
+    let initialCredits = 50;
+    let referredById = null;
+    if (ref && typeof ref === 'string') {
+      const cleanRef = ref.trim().toUpperCase();
+      try {
+        const referrer = await prisma.user.findUnique({
+          where: { referralCode: cleanRef }
+        });
+        if (referrer && referrer.id !== user.id) {
+          referredById = referrer.id;
+          initialCredits = 75; // 50 welcome credits + 25 referral bonus
+          // Reward referrer atomically with +25 credits
+          await prisma.user.update({
+            where: { id: referrer.id },
+            data: { credits: { increment: 25 } }
+          });
+        }
+      } catch (refErr) {
+        console.warn('Referral processing warning:', refErr.message);
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -151,13 +181,18 @@ export async function register(req, res) {
         isVerified: true,
         otp: null,
         otpExpiresAt: null,
-        role: assignedRole
+        role: assignedRole,
+        credits: initialCredits,
+        referralCode,
+        referredById
       },
       select: {
         id: true,
         email: true,
         role: true,
         isVerified: true,
+        credits: true,
+        referralCode: true,
         createdAt: true
       }
     });
@@ -170,7 +205,9 @@ export async function register(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: 'Account successfully registered and verified',
+      message: referredById 
+        ? 'Account created! +25 bonus study credits awarded for using a classmate invitation.' 
+        : 'Account successfully registered with 50 starter study credits.',
       token,
       user: updatedUser
     });
@@ -225,6 +262,16 @@ export async function login(req, res) {
       currentRole = 'ADMIN';
     }
 
+    // Ensure existing user has a referral code generated
+    let referralCode = user.referralCode;
+    if (!referralCode) {
+      referralCode = 'CV-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { referralCode }
+      });
+    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: currentRole },
       JWT_SECRET,
@@ -238,7 +285,9 @@ export async function login(req, res) {
         id: user.id,
         email: user.email,
         role: currentRole,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        credits: user.credits ?? 50,
+        referralCode
       }
     });
   } catch (error) {
@@ -251,7 +300,67 @@ export async function login(req, res) {
  * Get current authenticated user profile
  */
 export async function getMe(req, res) {
-  return res.json({ user: req.user });
+  try {
+    let referralCode = req.user.referralCode;
+    if (!referralCode) {
+      referralCode = 'CV-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { referralCode }
+      });
+      req.user.referralCode = referralCode;
+    }
+    return res.json({ user: req.user });
+  } catch (err) {
+    return res.json({ user: req.user });
+  }
+}
+
+/**
+ * Get rewards, credits, and referral statistics for student
+ */
+export async function getUserRewards(req, res) {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        credits: true,
+        referralCode: true,
+        _count: {
+          select: {
+            referrals: true,
+            unlockedFiles: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let referralCode = user.referralCode;
+    if (!referralCode) {
+      referralCode = 'CV-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      await prisma.user.update({
+        where: { id: userId },
+        data: { referralCode }
+      });
+    }
+
+    return res.json({
+      credits: user.credits ?? 50,
+      referralCode,
+      referralCount: user._count.referrals || 0,
+      unlockedCount: user._count.unlockedFiles || 0
+    });
+  } catch (error) {
+    console.error('getUserRewards error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve rewards data' });
+  }
 }
 
 /**
@@ -355,7 +464,9 @@ export async function resetPassword(req, res) {
         id: true,
         email: true,
         role: true,
-        isVerified: true
+        isVerified: true,
+        credits: true,
+        referralCode: true
       }
     });
 

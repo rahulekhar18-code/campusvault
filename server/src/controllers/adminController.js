@@ -47,9 +47,21 @@ export async function approveResource(req, res) {
       }
     });
 
+    // Reward student uploader with +20 study credits on approval
+    if (resource.uploaderId) {
+      try {
+        await prisma.user.update({
+          where: { id: resource.uploaderId },
+          data: { credits: { increment: 20 } }
+        });
+      } catch (credErr) {
+        console.warn('Failed to reward upload credits:', credErr.message);
+      }
+    }
+
     return res.json({
       success: true,
-      message: 'File approved and published to Read Files',
+      message: 'File approved and published to Read Files (+20 credits awarded to student contributor)',
       resource: updated
     });
   } catch (error) {
@@ -99,6 +111,7 @@ export async function rejectResource(req, res) {
 export async function toggleResourceLock(req, res) {
   try {
     const { id } = req.params;
+    const { isStrictLock, creditCost, isLocked } = req.body || {};
 
     const resource = await prisma.resource.findUnique({
       where: { id }
@@ -108,23 +121,34 @@ export async function toggleResourceLock(req, res) {
       return res.status(404).json({ error: 'Resource not found' });
     }
 
+    const data = {};
+    if (typeof isLocked === 'boolean') {
+      data.isLocked = isLocked;
+    } else if (isLocked === undefined && isStrictLock === undefined && creditCost === undefined) {
+      data.isLocked = !resource.isLocked;
+    }
+
+    if (typeof isStrictLock === 'boolean') {
+      data.isStrictLock = isStrictLock;
+    }
+
+    if (creditCost !== undefined) {
+      data.creditCost = Math.max(0, parseInt(creditCost, 10) || 0);
+    }
+
     const updated = await prisma.resource.update({
       where: { id },
-      data: {
-        isLocked: !resource.isLocked
-      }
+      data
     });
 
     return res.json({
       success: true,
-      message: updated.isLocked
-        ? 'File locked: restricted to in-app reading only'
-        : 'File unlocked: free for offline download',
+      message: `Lock settings updated for "${updated.title}"`,
       resource: updated
     });
   } catch (error) {
     console.error('toggleResourceLock error:', error);
-    return res.status(500).json({ error: 'Failed to toggle resource lock' });
+    return res.status(500).json({ error: 'Failed to update resource lock settings' });
   }
 }
 

@@ -1,9 +1,9 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
-import { BookOpen, Upload, Shield, LogOut, GraduationCap, Bookmark } from 'lucide-react';
+import { BookOpen, Upload, Shield, LogOut, GraduationCap, Bookmark, Unlock, Coins } from 'lucide-react';
 
-export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }) {
+export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0, onOpenRewards }) {
   const { user, logout } = useAuth();
   const { settings } = useAppSettings();
 
@@ -74,6 +74,19 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
               </button>
 
               <button
+                onClick={() => setCurrentPage('unlock-hub')}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
+                  currentPage === 'unlock-hub'
+                    ? 'text-white shadow-sm'
+                    : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50'
+                }`}
+                style={currentPage === 'unlock-hub' ? { backgroundColor: '#059669' } : {}}
+              >
+                <Unlock className="w-4 h-4" />
+                <span>Unlock Hub</span>
+              </button>
+
+              <button
                 onClick={() => setCurrentPage('upload')}
                 className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
                   currentPage === 'upload'
@@ -107,8 +120,21 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
               )}
             </nav>
 
-            {/* User Status & Sign Out */}
+            {/* User Status, Wallet & Sign Out */}
             <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Study Credits Wallet Badge (Opens Rewards & WhatsApp Invite Modal) */}
+              {onOpenRewards && (
+                <button
+                  type="button"
+                  onClick={onOpenRewards}
+                  title="Your Study Credits Wallet (Click to Earn More)"
+                  className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-50 hover:bg-amber-100 active:scale-95 border border-amber-200/90 text-amber-800 rounded-full text-xs font-bold shadow-2xs transition cursor-pointer"
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{user?.credits ?? 50} 🪙</span>
+                </button>
+              )}
+
               <div className="hidden md:flex flex-col items-end text-right">
                 <span className="text-xs font-medium text-gray-800">{user?.email}</span>
                 <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
@@ -138,7 +164,7 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
       </header>
 
       {/* Modern Mobile Bottom Navigation Bar (Thumb-friendly, Native App Feel) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-3 py-1.5 flex items-center justify-around shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-2 py-1.5 flex items-center justify-around shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
         <button
           onClick={() => setCurrentPage('read')}
           className={`flex-1 flex flex-col items-center justify-center py-1 rounded-xl transition-all ${
@@ -167,6 +193,20 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
             <Bookmark className="w-5 h-5" />
           </div>
           <span className="text-[10px] sm:text-[11px] mt-0.5">Saved</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentPage('unlock-hub')}
+          className={`flex-1 flex flex-col items-center justify-center py-1 rounded-xl transition-all ${
+            currentPage === 'unlock-hub'
+              ? 'text-emerald-600 font-bold'
+              : 'text-gray-500 hover:text-gray-900 font-medium'
+          }`}
+        >
+          <div className={`p-1 rounded-lg ${currentPage === 'unlock-hub' ? 'bg-emerald-50' : ''}`}>
+            <Unlock className="w-5 h-5 text-emerald-600" />
+          </div>
+          <span className="text-[10px] sm:text-[11px] mt-0.5">Unlock</span>
         </button>
 
         <button

@@ -147,12 +147,36 @@ export async function previewFile(resourceId) {
 }
 
 /**
- * Toggle lock/unlock status of a resource (Admin)
+ * Toggle lock/unlock status or pricing/strict-lock of a resource (Admin)
  */
-export async function toggleResourceLock(id) {
+export async function toggleResourceLock(id, options = {}) {
   return await apiRequest(`/admin/resources/${id}/toggle-lock`, {
-    method: 'PATCH'
+    method: 'PATCH',
+    body: JSON.stringify(options)
   });
+}
+
+/**
+ * Unlock a locked resource with study credits (Student)
+ */
+export async function unlockResource(resourceId) {
+  return await apiRequest(`/resources/${resourceId}/unlock`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Fetch all unlocked resources for the student's Unlock Hub
+ */
+export async function fetchUnlockedResources() {
+  return await apiRequest('/resources/unlocked-hub');
+}
+
+/**
+ * Fetch student study rewards, credit balance, referral code & stats
+ */
+export async function fetchUserRewards() {
+  return await apiRequest('/auth/rewards');
 }
 
 /**

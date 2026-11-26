@@ -5,9 +5,10 @@ import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import { getSubjectsForSemester } from '../data/subjects';
 import DocumentReaderModal from '../components/DocumentReaderModal';
+import UnlockResourceModal from '../components/UnlockResourceModal';
 import { 
   Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
-  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase, Bookmark, Folder, FolderOpen 
+  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase, Bookmark, Folder, FolderOpen, Coins, Sparkles
 } from 'lucide-react';
 
 function formatFileSize(bytes) {
@@ -18,8 +19,8 @@ function formatFileSize(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-export default function ReadFilesPage({ isBookmarksOnly = false }) {
-  const { user } = useAuth();
+export default function ReadFilesPage({ isBookmarksOnly = false, onOpenRewards }) {
+  const { user, setUser, refreshUser } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const { settings } = useAppSettings();
   const { branchCodes, semesterNumbers, categoryNames, getSubjects } = useAcademic();
@@ -39,6 +40,18 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
   const [downloadingId, setDownloadingId] = useState(null);
   const [readingResource, setReadingResource] = useState(null);
   const [lockedNoticeResource, setLockedNoticeResource] = useState(null);
+  const [unlockingResource, setUnlockingResource] = useState(null);
+
+  const handleUnlocked = (resourceId, remainingCredits) => {
+    setResources(prev =>
+      prev.map(r => r.id === resourceId ? { ...r, isUnlockedByMe: true } : r)
+    );
+    if (setUser && remainingCredits !== undefined) {
+      setUser(prev => ({ ...prev, credits: remainingCredits }));
+    } else if (refreshUser) {
+      refreshUser();
+    }
+  };
 
   // Available subjects based on branch & semester
   const academicSubjects = getSubjects(
@@ -395,10 +408,20 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                       <Bookmark className={`w-3.5 h-3.5 ${item.isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
                     </button>
 
-                    {item.isLocked ? (
+                    {item.isUnlockedByMe ? (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <Unlock className="w-2.5 h-2.5" />
+                        <span>Unlocked</span>
+                      </span>
+                    ) : item.isStrictLock ? (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Strictly Read-Only</span>
+                      </span>
+                    ) : item.isLocked ? (
                       <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                         <Lock className="w-2.5 h-2.5" />
-                        <span>Read-Only</span>
+                        <span>Locked ({item.creditCost || 10} 🪙)</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -437,7 +460,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                 </div>
               </div>
 
-              {/* Actions: Dual Buttons (Read Online & Download) */}
+              {/* Actions: Dual Buttons (Read Online & Download/Unlock) */}
               <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-gray-400 flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5" />
@@ -445,7 +468,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                 </span>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {/* Read Online Button: Always available for in-app reading without downloading */}
+                  {/* Read Online Button */}
                   <button
                     onClick={() => handlePreview(item)}
                     className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
@@ -455,26 +478,35 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                     <span>Read Online</span>
                   </button>
 
-                  {/* Download Button */}
-                  {item.isLocked && !isAdmin ? (
-                    <button
-                      onClick={() => handleDownload(item)}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition"
-                      title="Locked file (Click to read notice)"
-                    >
-                      <Lock className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Locked</span>
-                    </button>
-                  ) : (
+                  {/* Download or Unlock Button */}
+                  {item.isUnlockedByMe || isAdmin || !item.isLocked ? (
                     <button
                       onClick={() => handleDownload(item)}
                       disabled={downloadingId === item.id}
                       className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white shadow-sm transition disabled:opacity-50"
-                      style={{ backgroundColor: settings.themeColor || '#2563eb' }}
-                      title="Download File"
+                      style={{ backgroundColor: item.isUnlockedByMe ? '#059669' : (settings.themeColor || '#2563eb') }}
+                      title={item.isUnlockedByMe ? 'Download Unlocked File' : 'Download File'}
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>{downloadingId === item.id ? 'Saving...' : 'Download'}</span>
+                    </button>
+                  ) : item.isStrictLock ? (
+                    <button
+                      onClick={() => setLockedNoticeResource(item)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition"
+                      title="Strictly Read-Only file (Downloads not permitted)"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-gray-500" />
+                      <span>Read-Only</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setUnlockingResource(item)}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition"
+                      title={`Unlock with ${item.creditCost || 10} Study Credits`}
+                    >
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Unlock ({item.creditCost || 10} 🪙)</span>
                     </button>
                   )}
                 </div>
@@ -484,7 +516,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
         </div>
       )}
 
-      {/* Locked Notice Popup Modal */}
+      {/* Strictly Locked / Notice Modal */}
       {lockedNoticeResource && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
@@ -495,27 +527,27 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
               <Lock className="w-6 h-6" />
             </div>
 
             <h3 className="text-lg font-bold text-gray-900 mb-1">
-              Read-Only Resource
+              {lockedNoticeResource.isStrictLock ? 'Strictly Read-Only Resource' : 'Locked Study Resource'}
             </h3>
             <p className="text-xs font-semibold text-blue-600 mb-3 truncate">
               {lockedNoticeResource.title} ({lockedNoticeResource.subject})
             </p>
 
-            <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs leading-relaxed mb-5 space-y-2">
-              <p>
-                <strong>Offline downloads are locked by Admin</strong> for this resource to protect academic notes and verified materials.
-              </p>
-              <p className="text-amber-800">
-                You can freely <strong>Read & Study the complete file online</strong> right now using our in-app reader!
-              </p>
-              <p className="text-[11px] text-amber-700 italic border-t border-amber-200/60 pt-1.5">
-                💡 Tip: Offline downloads will be unlockable via student contributions & credits in a future update.
-              </p>
+            <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-900 text-xs leading-relaxed mb-5 space-y-2">
+              {lockedNoticeResource.isStrictLock ? (
+                <p>
+                  <strong>Offline downloads are strictly restricted</strong> for this document by college administration. However, you can freely read the full document in-app with our AI assistant.
+                </p>
+              ) : (
+                <p>
+                  This resource can be unlocked for lifetime offline download using <strong>{lockedNoticeResource.creditCost || 10} Study Credits</strong>.
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-end space-x-3">
@@ -526,6 +558,22 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
               >
                 Close
               </button>
+              
+              {!lockedNoticeResource.isStrictLock && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const res = lockedNoticeResource;
+                    setLockedNoticeResource(null);
+                    setUnlockingResource(res);
+                  }}
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-lg shadow-sm transition"
+                >
+                  <Unlock className="w-4 h-4" />
+                  <span>Unlock Resource</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -537,11 +585,22 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                 style={{ backgroundColor: settings.themeColor || '#2563eb' }}
               >
                 <Eye className="w-4 h-4" />
-                <span>Read Online Now</span>
+                <span>Read Online</span>
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Unlock Resource Modal */}
+      {unlockingResource && (
+        <UnlockResourceModal
+          resource={unlockingResource}
+          user={user}
+          onClose={() => setUnlockingResource(null)}
+          onUnlocked={handleUnlocked}
+          onOpenRewards={onOpenRewards}
+        />
       )}
 
       {/* In-App Document Reader Modal */}

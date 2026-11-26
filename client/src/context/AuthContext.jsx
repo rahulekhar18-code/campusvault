@@ -39,10 +39,10 @@ export function AuthProvider({ children }) {
     });
   };
 
-  const register = async (email, password, otp) => {
+  const register = async (email, password, otp, ref) => {
     const data = await apiRequest('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, otp })
+      body: JSON.stringify({ email, password, otp, ref })
     });
     if (data.token) {
       setAuthToken(data.token);
@@ -50,6 +50,18 @@ export function AuthProvider({ children }) {
       setUser(data.user);
     }
     return data;
+  };
+
+  const refreshUser = async () => {
+    try {
+      const data = await apiRequest('/auth/me');
+      if (data && data.user) {
+        setUser(data.user);
+        return data.user;
+      }
+    } catch (e) {
+      console.warn('Failed to refresh user profile:', e.message);
+    }
   };
 
   const login = async (email, password) => {
@@ -95,10 +107,12 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         token,
         loading,
         login,
         register,
+        refreshUser,
         sendOtp,
         forgotPasswordSendOtp,
         resetPassword,

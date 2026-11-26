@@ -26,6 +26,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
   const [category, setCategory] = useState(resource.category || 'Notes');
   const [status, setStatus] = useState(resource.status || 'PENDING');
   const [isLocked, setIsLocked] = useState(resource.isLocked || false);
+  const [creditCost, setCreditCost] = useState(resource.creditCost ?? 10);
+  const [isStrictLock, setIsStrictLock] = useState(resource.isStrictLock || false);
   const [isTopperVerified, setIsTopperVerified] = useState(resource.isTopperVerified || false);
   const [isProfVerified, setIsProfVerified] = useState(resource.isProfVerified || false);
 
@@ -47,6 +49,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
       setCategory(resource.category || 'Notes');
       setStatus(resource.status || 'PENDING');
       setIsLocked(resource.isLocked || false);
+      setCreditCost(resource.creditCost ?? 10);
+      setIsStrictLock(resource.isStrictLock || false);
       setIsTopperVerified(resource.isTopperVerified || false);
       setIsProfVerified(resource.isProfVerified || false);
 
@@ -104,7 +108,14 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
           subject: finalSubject,
           unit,
           category,
-          ...(isAdmin ? { status, isLocked, isTopperVerified, isProfVerified } : {})
+          ...(isAdmin ? {
+            status,
+            isLocked,
+            isStrictLock,
+            creditCost: Math.max(0, parseInt(creditCost, 10) || 0),
+            isTopperVerified,
+            isProfVerified
+          } : {})
         })
       });
 
@@ -118,6 +129,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
         category,
         status,
         isLocked,
+        isStrictLock,
+        creditCost: Math.max(0, parseInt(creditCost, 10) || 0),
         isTopperVerified,
         isProfVerified
       });
@@ -286,23 +299,59 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
             </div>
           )}
 
-          {/* Admin Lock / Read-Only Toggle */}
+          {/* Admin Lock & Pricing Configuration */}
           {isAdmin && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-amber-900 block">Lock File (Read-Only Mode)</span>
-                <span className="text-[11px] text-amber-700">Restricts offline downloading for students. Only in-app preview/reading will be permitted.</span>
+            <div className="space-y-2.5 p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-amber-900 block">Lock File (Study Credits Unlockable)</span>
+                  <span className="text-[11px] text-amber-700">Restricts free download. Students can unlock for offline download using study credits.</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isLocked}
+                  onChange={(e) => setIsLocked(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer ml-3 flex-shrink-0"
+                />
               </div>
-              <input
-                type="checkbox"
-                checked={isLocked}
-                onChange={(e) => setIsLocked(e.target.checked)}
-                className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer ml-3 flex-shrink-0"
-              />
+
+              {isLocked && (
+                <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-semibold text-amber-900 block">Unlock Cost (Credits)</label>
+                    <span className="text-[10px] text-amber-700">Number of credits a student spends to permanently unlock</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={creditCost}
+                      onChange={(e) => setCreditCost(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-20 text-xs p-1.5 font-bold text-center bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <span className="text-xs font-bold text-amber-800">🪙</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Master Strict Lock Toggle */}
+              <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-purple-900 block">Master Strict Lock (Always Read-Only)</span>
+                  <span className="text-[10px] text-purple-700">Cannot be unlocked with credits or downloaded. Strictly in-app reading forever.</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isStrictLock}
+                  onChange={(e) => setIsStrictLock(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 cursor-pointer ml-3 flex-shrink-0"
+                />
+              </div>
             </div>
           )}
 
-          {/* Admin Quality Verification Badges */}
+          {/* Admin Quality Verification Badges (Student & Peer Vetted) */}
           {isAdmin && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="p-2.5 bg-yellow-50/80 border border-yellow-200 rounded-lg flex items-center justify-between">
@@ -320,8 +369,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
 
               <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-lg flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-emerald-900 block">⭐ Prof. Recommended</span>
-                  <span className="text-[10px] text-emerald-700">Faculty vetted resource</span>
+                  <span className="text-xs font-bold text-emerald-900 block">⭐ Vault Recommended</span>
+                  <span className="text-[10px] text-emerald-700">Verified trusted resource</span>
                 </div>
                 <input
                   type="checkbox"

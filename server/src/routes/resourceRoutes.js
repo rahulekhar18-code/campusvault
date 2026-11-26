@@ -6,7 +6,9 @@ import {
   updateResource,
   deleteResource,
   downloadResource,
-  toggleBookmark
+  toggleBookmark,
+  unlockResource,
+  getUnlockedResources
 } from '../controllers/resourceController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { upload } from '../middleware/uploadMiddleware.js';
@@ -15,6 +17,12 @@ const router = Router();
 
 // Read approved files (student and admin)
 router.get('/', authenticateToken, getApprovedResources);
+
+// View personal unlocked files (Unlock Hub)
+router.get('/unlocked-hub', authenticateToken, getUnlockedResources);
+
+// Unlock a locked resource with study credits
+router.post('/:id/unlock', authenticateToken, unlockResource);
 
 // Toggle bookmark on a resource (student and admin)
 router.post('/:id/bookmark', authenticateToken, toggleBookmark);

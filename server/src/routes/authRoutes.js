@@ -5,7 +5,8 @@ import {
   login,
   getMe,
   forgotPasswordSendOtp,
-  resetPassword
+  resetPassword,
+  getUserRewards
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -17,5 +18,6 @@ router.post('/login', login);
 router.post('/forgot-password-otp', forgotPasswordSendOtp);
 router.post('/reset-password', resetPassword);
 router.get('/me', authenticateToken, getMe);
+router.get('/rewards', authenticateToken, getUserRewards);
 
 export default router;

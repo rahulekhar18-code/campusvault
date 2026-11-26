@@ -14,7 +14,9 @@ import {
   X,
   RotateCcw,
   ShieldCheck,
-  User
+  User,
+  Sparkles,
+  Gift
 } from 'lucide-react';
 
 const SAVED_ACCOUNTS_KEY = 'campusvault_saved_accounts';
@@ -31,6 +33,7 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -74,6 +77,21 @@ export default function AuthPage() {
         const parsed = JSON.parse(rawAccounts);
         if (Array.isArray(parsed)) {
           setSavedAccounts(parsed);
+        }
+      }
+
+      // Check URL query params for batchmate referral invitation (?ref=CODE)
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      if (ref) {
+        const cleanRef = ref.trim().toUpperCase();
+        setReferralCode(cleanRef);
+        sessionStorage.setItem('campusvault_ref', cleanRef);
+        setMode('register');
+      } else {
+        const storedRef = sessionStorage.getItem('campusvault_ref');
+        if (storedRef) {
+          setReferralCode(storedRef);
         }
       }
     } catch (e) {
@@ -179,7 +197,8 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      const res = await register(cleanEmail, password, otp.trim());
+      const appliedRef = referralCode.trim() || sessionStorage.getItem('campusvault_ref') || undefined;
+      const res = await register(cleanEmail, password, otp.trim(), appliedRef);
       saveAccountToStorage(cleanEmail, res.user?.role);
     } catch (err) {
       setError(err.message || 'Registration failed');
@@ -556,6 +575,31 @@ export default function AuthPage() {
                       />
                     </div>
                   </div>
+
+                  {/* Referral Bonus Section */}
+                  {referralCode ? (
+                    <div className="flex items-center space-x-2.5 p-3 bg-amber-50/90 border border-amber-200/90 rounded-xl text-amber-900 text-xs shadow-2xs">
+                      <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold">Referral Invite Applied: </span>
+                        <span className="font-mono font-semibold">{referralCode}</span>
+                        <span className="block text-[11px] text-amber-700 font-medium">+25 bonus study credits will be added to your wallet!</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                        Classmate Referral Code (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. CV-A8B9C1 (+25 bonus credits)"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="w-full px-3 py-2 text-xs font-mono tracking-wider uppercase bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                      />
+                    </div>
+                  )}
 
                   {/* Terms & Honor Code Agreement */}
                   <div className="flex items-start space-x-2 pt-1 bg-gray-50/70 p-2.5 rounded-lg border border-gray-200">

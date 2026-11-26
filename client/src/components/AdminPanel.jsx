@@ -743,16 +743,24 @@ export default function AdminPanel({ onPendingCountChange }) {
                       <td className="px-3 py-3 whitespace-nowrap">
                         <button
                           onClick={() => handleToggleLock(item.id)}
-                          title={item.isLocked ? "File is Locked for in-app reading only. Click to Unlock for downloads" : "File is Free to download. Click to Lock as Read-Only"}
-                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${item.isLocked
-                            ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            }`}
+                          title={item.isStrictLock ? "Strictly Read-Only (Permanent Master Lock)" : item.isLocked ? `File is Locked (${item.creditCost || 10} Credits to unlock). Click to unlock` : "File is Free to download. Click to Lock"}
+                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${
+                            item.isStrictLock
+                              ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100'
+                              : item.isLocked
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          }`}
                         >
-                          {item.isLocked ? (
+                          {item.isStrictLock ? (
+                            <>
+                              <Lock className="w-3 h-3 text-purple-600" />
+                              <span>STRICT LOCK (No DL)</span>
+                            </>
+                          ) : item.isLocked ? (
                             <>
                               <Lock className="w-3 h-3 text-amber-600" />
-                              <span>LOCKED (Read-Only)</span>
+                              <span>LOCKED ({item.creditCost || 10} 🪙)</span>
                             </>
                           ) : (
                             <>
