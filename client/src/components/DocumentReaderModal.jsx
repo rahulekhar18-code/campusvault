@@ -477,18 +477,6 @@ export default function DocumentReaderModal({ resource, onClose }) {
               </div>
             )}
 
-            {/* Subtle Non-Obstructive Security Identity Ribbon (Zero interference with reading) */}
-            {isProtected && (
-              <div className="bg-gray-900/95 border-b border-gray-800/80 px-3 py-1 text-[11px] font-mono text-gray-400 flex items-center justify-between z-20 flex-shrink-0 select-none">
-                <span className="truncate text-gray-300">
-                  🔒 Licensed Study Copy • {user?.email || 'YCCE Student'}
-                </span>
-                <span className="hidden sm:inline text-[10px] text-gray-500">
-                  CampusVault • Verified College Resource
-                </span>
-              </div>
-            )}
-
             {loading && (
               <div className="flex flex-col items-center justify-center p-8 space-y-3">
                 <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
