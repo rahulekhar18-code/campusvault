@@ -649,8 +649,8 @@ export default function AdminPanel({ onPendingCountChange }) {
               No files found matching the criteria.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-xs">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-[980px] w-full divide-y divide-gray-200 text-xs">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">File Details</th>
@@ -884,8 +884,8 @@ export default function AdminPanel({ onPendingCountChange }) {
               No registered users found matching the query.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-xs">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-[980px] w-full divide-y divide-gray-200 text-xs">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2.5 text-left font-bold text-gray-600">College Email</th>

@@ -188,26 +188,26 @@ export default function DocumentReaderModal({ resource, onClose }) {
         }`}
       >
         {/* Top Header Bar */}
-        <div className="bg-gray-800/95 border-b border-gray-700 px-4 py-3 flex items-center justify-between text-white flex-shrink-0 z-40">
-          <div className="flex items-center space-x-3 min-w-0">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 flex-shrink-0">
-              <BookOpen className="w-5 h-5" />
+        <div className="bg-gray-800/95 border-b border-gray-700 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between text-white flex-shrink-0 z-40">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 text-blue-400 flex-shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-sm sm:text-base font-bold truncate max-w-xs sm:max-w-md" title={resource.title}>
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <h2 className="text-xs sm:text-base font-bold truncate max-w-[130px] xs:max-w-[200px] sm:max-w-md" title={resource.title}>
                   {resource.title}
                 </h2>
                 {resource.isTopperVerified && (
-                  <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="hidden xs:inline-flex items-center space-x-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                     <Award className="w-2.5 h-2.5" />
-                    <span>Topper Verified</span>
+                    <span>Topper</span>
                   </span>
                 )}
                 {resource.isProfVerified && (
-                  <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  <span className="hidden xs:inline-flex items-center space-x-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                     <ShieldCheck className="w-2.5 h-2.5" />
-                    <span>Prof. Recommended</span>
+                    <span>Prof</span>
                   </span>
                 )}
                 {resource.isLocked && (
@@ -217,14 +217,14 @@ export default function DocumentReaderModal({ resource, onClose }) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-400 truncate">
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate">
                 {resource.subject} • {resource.branch} • Sem {resource.semester} • {resource.category}
               </p>
             </div>
           </div>
 
           {/* Controls: AI Assistant, Zoom, Fullscreen, Close */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
             {/* AI Assistant Button */}
             <button
               type="button"
@@ -235,7 +235,7 @@ export default function DocumentReaderModal({ resource, onClose }) {
                   setAiOpen(!aiOpen);
                 }
               }}
-              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm ${
+              className={`inline-flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm ${
                 aiOpen 
                   ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white' 
                   : 'bg-gradient-to-r from-purple-600/90 to-blue-600/90 hover:from-purple-500 hover:to-blue-500 text-white'
@@ -243,7 +243,7 @@ export default function DocumentReaderModal({ resource, onClose }) {
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
               <span className="hidden sm:inline">AI Study Assistant</span>
-              <span className="sm:hidden">AI</span>
+              <span className="sm:hidden text-[11px]">AI</span>
             </button>
 
             {/* Zoom Controls for docx & image */}
@@ -393,9 +393,9 @@ export default function DocumentReaderModal({ resource, onClose }) {
             )}
           </div>
 
-          {/* AI Study Assistant Side Drawer */}
+          {/* AI Study Assistant Side Drawer (Overlay on mobile, Split-view on desktop) */}
           {aiOpen && (
-            <div className="w-full sm:w-96 bg-gray-900 border-l border-gray-700/80 flex flex-col z-30 shadow-2xl animate-fadeIn">
+            <div className="w-full sm:w-96 absolute inset-0 sm:static z-40 bg-gray-900 border-l border-gray-700/80 flex flex-col shadow-2xl animate-fadeIn">
               {/* AI Drawer Header */}
               <div className="p-3.5 border-b border-gray-800 flex items-center justify-between bg-gray-850">
                 <div className="flex items-center space-x-2">

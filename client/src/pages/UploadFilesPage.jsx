@@ -383,8 +383,8 @@ export default function UploadFilesPage() {
                   return (
                     <div key={item.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center space-x-2">
-                          <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-bold text-gray-900 break-words">{item.title}</h4>
                           {/* Status Badge */}
                           {isPending && (
                             <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">

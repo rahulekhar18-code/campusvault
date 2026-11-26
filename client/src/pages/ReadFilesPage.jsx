@@ -296,39 +296,30 @@ export default function ReadFilesPage() {
           {resources.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+              className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center space-x-2 min-w-0 flex-1">
-                    <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug truncate" title={item.title}>
-                        {item.title}
-                      </h3>
-                      <p className="text-xs font-semibold text-blue-600 truncate">{item.subject}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <div className="flex items-center gap-1">
-                      {item.isTopperVerified && (
-                        <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300" title="Topper Verified Notes">
-                          <Award className="w-2.5 h-2.5" />
-                          <span>Topper</span>
-                        </span>
-                      )}
-                      {item.isProfVerified && (
-                        <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300" title="Professor Recommended">
-                          <ShieldCheck className="w-2.5 h-2.5" />
-                          <span>Prof</span>
-                        </span>
-                      )}
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
-                        {item.category}
+                {/* Top Row: Category, Verification Badges & Lock Status */}
+                <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                      {item.category}
+                    </span>
+                    {item.isTopperVerified && (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-2xs">
+                        <Award className="w-2.5 h-2.5 text-yellow-700" />
+                        <span>Topper Verified</span>
                       </span>
-                    </div>
+                    )}
+                    {item.isProfVerified && (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <ShieldCheck className="w-2.5 h-2.5 text-emerald-700" />
+                        <span>Prof. Verified</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
                     {item.isLocked ? (
                       <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                         <Lock className="w-2.5 h-2.5" />
@@ -343,7 +334,21 @@ export default function ReadFilesPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2 text-xs text-gray-600">
+                {/* Title & Subject */}
+                <div className="flex items-start space-x-2.5 mb-3">
+                  <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0 mt-0.5">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug line-clamp-2" title={item.title}>
+                      {item.title}
+                    </h3>
+                    <p className="text-xs font-semibold text-blue-600 truncate mt-0.5">{item.subject}</p>
+                  </div>
+                </div>
+
+                {/* Metadata Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 pt-2.5 border-t border-gray-100">
                   <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
                     {item.branch}
                   </span>
@@ -358,13 +363,13 @@ export default function ReadFilesPage() {
               </div>
 
               {/* Actions: Dual Buttons (Read Online & Download) */}
-              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+              <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] text-gray-400 flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                 </span>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {/* Read Online Button: Always available for in-app reading without downloading */}
                   <button
                     onClick={() => handlePreview(item)}
