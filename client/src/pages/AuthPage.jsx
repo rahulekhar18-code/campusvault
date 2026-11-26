@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
+import TermsModal from '../components/TermsModal';
 import {
   Mail,
   Lock,
@@ -30,6 +31,8 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Remember credentials state
   const [rememberMe, setRememberMe] = useState(true);
@@ -167,6 +170,10 @@ export default function AuthPage() {
     }
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
+      return;
+    }
+    if (!agreedToTerms) {
+      setError('Please read and agree to the Terms of Service & Academic Honor Code to proceed');
       return;
     }
 
@@ -550,9 +557,31 @@ export default function AuthPage() {
                     </div>
                   </div>
 
+                  {/* Terms & Honor Code Agreement */}
+                  <div className="flex items-start space-x-2 pt-1 bg-gray-50/70 p-2.5 rounded-lg border border-gray-200">
+                    <input
+                      type="checkbox"
+                      id="termsCheckbox"
+                      required
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                    />
+                    <label htmlFor="termsCheckbox" className="text-[11px] sm:text-xs text-gray-600 leading-snug cursor-pointer select-none">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="font-bold text-blue-600 hover:text-blue-800 underline inline"
+                      >
+                        Terms of Service, Privacy & Academic Honor Code
+                      </button>
+                    </label>
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !agreedToTerms}
                     className="w-full mt-2 py-2.5 px-4 text-white text-sm font-semibold rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 disabled:opacity-50 min-h-[44px]"
                     style={{ backgroundColor: settings.themeColor || '#2563eb' }}
                   >
@@ -710,9 +739,31 @@ export default function AuthPage() {
                     </div>
                   </div>
 
+                  {/* Terms & Honor Code Agreement */}
+                  <div className="flex items-start space-x-2 pt-1 bg-gray-50/70 p-2.5 rounded-lg border border-gray-200">
+                    <input
+                      type="checkbox"
+                      id="termsCheckbox"
+                      required
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                    />
+                    <label htmlFor="termsCheckbox" className="text-[11px] sm:text-xs text-gray-600 leading-snug cursor-pointer select-none">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="font-bold text-blue-600 hover:text-blue-800 underline inline"
+                      >
+                        Terms of Service, Privacy & Academic Honor Code
+                      </button>
+                    </label>
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !agreedToTerms}
                     className="w-full mt-2 py-2.5 px-4 text-white text-sm font-semibold rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 disabled:opacity-50 min-h-[44px]"
                     style={{ backgroundColor: settings.themeColor || '#2563eb' }}
                   >
@@ -742,12 +793,24 @@ export default function AuthPage() {
         </div>
 
         {/* Security & College Notice Footer */}
-        <div className="bg-gray-50 px-5 sm:px-6 py-3 border-t border-gray-100 text-center">
+        <div className="bg-gray-50 px-5 sm:px-6 py-3 border-t border-gray-100 text-center space-y-1">
           <p className="text-[11px] text-gray-400">
             Secure login for students & admin • YCCE Verified Accounts
           </p>
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowTermsModal(true)}
+              className="text-[11px] text-gray-500 hover:text-blue-600 underline font-medium transition"
+            >
+              Terms of Service & Academic Honor Code
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Terms & Conditions Modal */}
+      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
     </div>
   );
 }

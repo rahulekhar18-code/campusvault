@@ -1,0 +1,21 @@
+{
+  "name": "CampusVault - College Notes & PYQs",
+  "short_name": "CampusVault",
+  "description": "Verified academic notes, solved question papers, and study resources for YCCE students",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "categories": ["education", "books", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -4,6 +4,8 @@ import { AppSettingsProvider } from './context/AppSettingsContext';
 import { AcademicProvider } from './context/AcademicContext';
 import Navbar from './components/Navbar';
 import AnnouncementBanner from './components/AnnouncementBanner';
+import InstallAppBanner from './components/InstallAppBanner';
+import TermsModal from './components/TermsModal';
 import AuthPage from './pages/AuthPage';
 import ReadFilesPage from './pages/ReadFilesPage';
 import UploadFilesPage from './pages/UploadFilesPage';
@@ -14,6 +16,7 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('read'); // 'read' | 'upload' | 'admin'
   const [pendingCount, setPendingCount] = useState(0);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Poll or fetch pending count for admin badge
   useEffect(() => {
@@ -51,6 +54,7 @@ function AppContent() {
         setCurrentPage={setCurrentPage}
         pendingCount={pendingCount}
       />
+      <InstallAppBanner />
       <AnnouncementBanner />
 
       <main className="flex-1 pb-16 md:pb-0">
@@ -69,9 +73,20 @@ function AppContent() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400 mb-14 md:mb-0">
-        CampusVault • Lightweight College Notes & Resources • Verified @ycce.in
+      <footer className="bg-white border-t border-gray-200 py-4 px-4 text-center text-xs text-gray-400 mb-14 md:mb-0 space-y-1">
+        <p>CampusVault • Lightweight College Notes & Resources • Verified @ycce.in</p>
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowTermsModal(true)}
+            className="text-[11px] text-gray-400 hover:text-blue-600 underline transition"
+          >
+            Terms of Service & Academic Honor Code
+          </button>
+        </div>
       </footer>
+
+      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
     </div>
   );
 }
