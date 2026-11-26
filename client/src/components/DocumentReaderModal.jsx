@@ -149,6 +149,33 @@ export default function DocumentReaderModal({ resource, onClose }) {
 
           pdfContainerRef.current.appendChild(canvas);
           await page.render({ canvasContext: ctx, viewport }).promise;
+
+          // Forensic Canvas-Burn Watermark: Painted directly into image pixels
+          if (settings?.preventScreenCapture !== false) {
+            const userIdentifier = user?.email || 'YCCE Student';
+            ctx.save();
+            ctx.rotate((-25 * Math.PI) / 180);
+            
+            const stepX = 280;
+            const stepY = 160;
+            const minX = -viewport.width;
+            const maxX = viewport.width * 2;
+            const minY = -viewport.height;
+            const maxY = viewport.height * 2;
+
+            for (let x = minX; x < maxX; x += stepX) {
+              for (let y = minY; y < maxY; y += stepY) {
+                ctx.font = 'bold 20px monospace';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+                ctx.fillText(userIdentifier, x, y);
+
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+                ctx.fillText('CAMPUSVAULT • RESTRICTED', x, y + 18);
+              }
+            }
+            ctx.restore();
+          }
         }
       } catch (err) {
         console.warn('PDF.js canvas rendering notice:', err);
@@ -477,13 +504,13 @@ export default function DocumentReaderModal({ resource, onClose }) {
               </div>
             )}
 
-            {/* Dynamic Anti-Leak Security Watermark Overlay */}
-            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.06] sm:opacity-[0.08] rotate-[-22deg] scale-125">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex justify-around whitespace-nowrap text-xs font-mono font-bold tracking-widest text-white uppercase">
-                  <span>CampusVault • {user?.email || 'YCCE Student'}</span>
-                  <span>CONFIDENTIAL • {user?.email || 'YCCE Student'}</span>
-                  <span>CampusVault • {user?.email || 'YCCE Student'}</span>
+            {/* Dynamic Anti-Leak Security Watermark Overlay (Works on both light and dark documents) */}
+            <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden flex flex-col justify-around opacity-[0.15] sm:opacity-[0.18] rotate-[-22deg] scale-125 mix-blend-difference">
+              {[...Array(9)].map((_, i) => (
+                <div key={i} className="flex justify-around whitespace-nowrap text-xs sm:text-sm font-mono font-black tracking-widest text-white uppercase">
+                  <span>{user?.email || 'YCCE Student'} • RESTRICTED</span>
+                  <span>CAMPUSVAULT SECURE • {user?.email || 'YCCE Student'}</span>
+                  <span>{user?.email || 'YCCE Student'} • RESTRICTED</span>
                 </div>
               ))}
             </div>
