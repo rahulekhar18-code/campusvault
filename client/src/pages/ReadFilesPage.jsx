@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile } from '../api/client';
+import { apiRequest, downloadFile, previewFile } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import { getSubjectsForSemester } from '../data/subjects';
-import { Search, Download, FileText, Filter, Calendar, BookOpen, Layers, GraduationCap } from 'lucide-react';
-
-const BRANCHES = ['All', 'IT', 'CSE', 'AIDS', 'ECE', 'MECH', 'CIVIL', 'EE'];
-const SEMESTERS = ['All', '1', '2', '3', '4', '5', '6', '7', '8'];
-const CATEGORIES = ['All', 'Notes', 'PYQ', 'Practicals', 'Assignments'];
+import { 
+  Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
+  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert 
+} from 'lucide-react';
 
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';
@@ -18,6 +18,8 @@ function formatFileSize(bytes) {
 }
 
 export default function ReadFilesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const { settings } = useAppSettings();
   const { branchCodes, semesterNumbers, categoryNames, getSubjects } = useAcademic();
 
@@ -30,7 +32,10 @@ export default function ReadFilesPage() {
   const [selectedSemester, setSelectedSemester] = useState('All');
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  
   const [downloadingId, setDownloadingId] = useState(null);
+  const [previewingId, setPreviewingId] = useState(null);
+  const [lockedNoticeResource, setLockedNoticeResource] = useState(null);
 
   // Available subjects based on branch & semester
   const academicSubjects = getSubjects(
@@ -70,7 +75,24 @@ export default function ReadFilesPage() {
     fetchResources();
   };
 
+  const handlePreview = async (resource) => {
+    try {
+      setPreviewingId(resource.id);
+      await previewFile(resource.id);
+    } catch (err) {
+      alert(`Unable to open preview: ${err.message}`);
+    } finally {
+      setPreviewingId(null);
+    }
+  };
+
   const handleDownload = async (resource) => {
+    // If resource is locked and user is not an Admin, show polite restriction modal
+    if (resource.isLocked && !isAdmin) {
+      setLockedNoticeResource(resource);
+      return;
+    }
+
     try {
       setDownloadingId(resource.id);
       await downloadFile(resource.id, resource.originalName || `${resource.title}.pdf`);
@@ -91,11 +113,13 @@ export default function ReadFilesPage() {
             <span>Read Files</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Browse and download verified academic resources approved by faculty and administrators.
+            Browse and read verified academic resources approved by faculty and administrators.
           </p>
         </div>
-        <div className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-200 self-start md:self-auto shadow-sm">
-          Showing <span className="font-semibold text-gray-800">{resources.length}</span> approved files
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+            Showing <span className="font-semibold text-gray-800">{resources.length}</span> approved files
+          </div>
         </div>
       </div>
 
@@ -198,8 +222,9 @@ export default function ReadFilesPage() {
 
       {/* Error Banner */}
       {error && (
-        <div className="p-4 mb-6 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-          {error}
+        <div className="p-4 mb-6 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center space-x-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -239,9 +264,22 @@ export default function ReadFilesPage() {
                       <p className="text-xs font-semibold text-blue-600 truncate">{item.subject}</p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap flex-shrink-0">
-                    {item.category}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                      {item.category}
+                    </span>
+                    {item.isLocked ? (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Read-Only</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <Unlock className="w-2.5 h-2.5" />
+                        <span>Free</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2 text-xs text-gray-600">
@@ -258,25 +296,111 @@ export default function ReadFilesPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+              {/* Actions: Dual Buttons (Read Online & Download) */}
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
                 <span className="text-[11px] text-gray-400 flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                 </span>
 
-                <button
-                  onClick={() => handleDownload(item)}
-                  disabled={downloadingId === item.id}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white shadow-sm transition disabled:opacity-50"
-                  style={{ backgroundColor: settings.themeColor || '#2563eb' }}
-                  title="Download File"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{downloadingId === item.id ? 'Downloading...' : 'Download'}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {/* Read / Preview Button: Always available */}
+                  <button
+                    onClick={() => handlePreview(item)}
+                    disabled={previewingId === item.id}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition disabled:opacity-50"
+                    title="Read & view document inline"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-gray-600" />
+                    <span>{previewingId === item.id ? 'Opening...' : 'Read Online'}</span>
+                  </button>
+
+                  {/* Download Button */}
+                  {item.isLocked && !isAdmin ? (
+                    <button
+                      onClick={() => handleDownload(item)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition"
+                      title="Locked file (Click to read notice)"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Locked</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDownload(item)}
+                      disabled={downloadingId === item.id}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white shadow-sm transition disabled:opacity-50"
+                      style={{ backgroundColor: settings.themeColor || '#2563eb' }}
+                      title="Download File"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{downloadingId === item.id ? 'Saving...' : 'Download'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Locked Notice Popup Modal */}
+      {lockedNoticeResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+            <button
+              onClick={() => setLockedNoticeResource(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              Read-Only Resource
+            </h3>
+            <p className="text-xs font-semibold text-blue-600 mb-3 truncate">
+              {lockedNoticeResource.title} ({lockedNoticeResource.subject})
+            </p>
+
+            <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs leading-relaxed mb-5 space-y-2">
+              <p>
+                <strong>Offline downloads are locked by Admin</strong> for this resource to protect academic notes and verified materials.
+              </p>
+              <p className="text-amber-800">
+                You can freely <strong>Read & Study the complete file online</strong> right now using our in-app reader!
+              </p>
+              <p className="text-[11px] text-amber-700 italic border-t border-amber-200/60 pt-1.5">
+                💡 Tip: Offline downloads will be unlockable via student contributions & credits in a future update.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setLockedNoticeResource(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 transition"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const res = lockedNoticeResource;
+                  setLockedNoticeResource(null);
+                  handlePreview(res);
+                }}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white rounded-lg shadow-sm hover:opacity-90 transition"
+                style={{ backgroundColor: settings.themeColor || '#2563eb' }}
+              >
+                <Eye className="w-4 h-4" />
+                <span>Read Online Now</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

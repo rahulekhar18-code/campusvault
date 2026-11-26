@@ -92,6 +92,41 @@ export async function rejectResource(req, res) {
 }
 
 /**
+ * Toggle lock status of a resource (Free Download vs Locked Read-Only)
+ */
+export async function toggleResourceLock(req, res) {
+  try {
+    const { id } = req.params;
+
+    const resource = await prisma.resource.findUnique({
+      where: { id }
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    const updated = await prisma.resource.update({
+      where: { id },
+      data: {
+        isLocked: !resource.isLocked
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: updated.isLocked
+        ? 'File locked: restricted to in-app reading only'
+        : 'File unlocked: free for offline download',
+      resource: updated
+    });
+  } catch (error) {
+    console.error('toggleResourceLock error:', error);
+    return res.status(500).json({ error: 'Failed to toggle resource lock' });
+  }
+}
+
+/**
  * Get all files across all statuses for Admin File Manager (CRUD & Move)
  */
 export async function getAllResources(req, res) {

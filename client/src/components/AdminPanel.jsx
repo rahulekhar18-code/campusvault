@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile } from '../api/client';
+import { apiRequest, downloadFile, toggleResourceLock, previewFile } from '../api/client';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
 import EditResourceModal from './EditResourceModal';
@@ -27,7 +27,10 @@ import {
   UserCheck,
   Mail,
   User,
-  GraduationCap
+  GraduationCap,
+  Lock,
+  Unlock,
+  Eye
 } from 'lucide-react';
 
 const PRESET_THEMES = [
@@ -227,6 +230,20 @@ export default function AdminPanel({ onPendingCountChange }) {
       await downloadFile(resource.id, resource.originalName || `${resource.title}.pdf`);
     } catch (err) {
       alert(`Download preview failed: ${err.message}`);
+    }
+  };
+
+  const handleToggleLock = async (id) => {
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await toggleResourceLock(id);
+      setActionSuccess(res.message);
+      setAllResources(prev =>
+        prev.map(r => r.id === id ? { ...r, isLocked: !r.isLocked } : r)
+      );
+    } catch (err) {
+      setActionError(err.message || 'Failed to toggle lock status');
     }
   };
 
@@ -590,6 +607,7 @@ export default function AdminPanel({ onPendingCountChange }) {
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Branch & Sem</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Subject & Category</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Storage Location (Path)</th>
+                    <th className="px-3 py-2.5 text-left font-bold text-gray-600">Access Mode</th>
                     <th className="px-3 py-2.5 text-left font-bold text-gray-600">Status</th>
                     <th className="px-3 py-2.5 text-right font-bold text-gray-600">Actions</th>
                   </tr>
@@ -614,6 +632,29 @@ export default function AdminPanel({ onPendingCountChange }) {
                         <span className="font-mono text-[10px] text-gray-600 bg-gray-100 px-2 py-1 rounded block max-w-xs truncate" title={item.storageKey}>
                           {item.storageKey}
                         </span>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <button
+                          onClick={() => handleToggleLock(item.id)}
+                          title={item.isLocked ? "File is Locked for in-app reading only. Click to Unlock for downloads" : "File is Free to download. Click to Lock as Read-Only"}
+                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition ${
+                            item.isLocked
+                              ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {item.isLocked ? (
+                            <>
+                              <Lock className="w-3 h-3 text-amber-600" />
+                              <span>LOCKED (Read-Only)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Unlock className="w-3 h-3 text-emerald-600" />
+                              <span>FREE (Download)</span>
+                            </>
+                          )}
+                        </button>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         {item.status === 'APPROVED' && (

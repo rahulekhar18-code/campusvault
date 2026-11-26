@@ -47,6 +47,7 @@ model Resource {
   mimeType        String
   status          ApprovalStatus @default(PENDING)
   rejectionReason String?
+  isLocked        Boolean        @default(false)
   uploaderId      String
   uploader        User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
   createdAt       DateTime       @default(now())

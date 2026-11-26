@@ -24,6 +24,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
   const [customSubject, setCustomSubject] = useState('');
   const [category, setCategory] = useState(resource.category || 'Notes');
   const [status, setStatus] = useState(resource.status || 'PENDING');
+  const [isLocked, setIsLocked] = useState(resource.isLocked || false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,6 +42,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
       setSemester(resource.semester || '1');
       setCategory(resource.category || 'Notes');
       setStatus(resource.status || 'PENDING');
+      setIsLocked(resource.isLocked || false);
 
       const subs = getSubjects(resource.branch || 'IT', resource.semester || '1');
       const finalSubs = subs.length > 0 ? subs : getSubjectsForSemester(resource.semester || '1');
@@ -95,7 +97,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
           semester,
           subject: finalSubject,
           category,
-          ...(isAdmin ? { status } : {})
+          ...(isAdmin ? { status, isLocked } : {})
         })
       });
 
@@ -106,7 +108,8 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
         semester,
         subject: finalSubject,
         category,
-        status
+        status,
+        isLocked
       });
       onClose();
     } catch (err) {
@@ -255,6 +258,22 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
                   <option key={st} value={st}>{st}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Admin Lock / Read-Only Toggle */}
+          {isAdmin && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-amber-900 block">Lock File (Read-Only Mode)</span>
+                <span className="text-[11px] text-amber-700">Restricts offline downloading for students. Only in-app preview/reading will be permitted.</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={isLocked}
+                onChange={(e) => setIsLocked(e.target.checked)}
+                className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer ml-3 flex-shrink-0"
+              />
             </div>
           )}
 

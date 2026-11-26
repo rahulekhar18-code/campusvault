@@ -52,6 +52,7 @@ export async function getApprovedResources(req, res) {
         originalName: true,
         fileSize: true,
         mimeType: true,
+        isLocked: true,
         createdAt: true,
         uploader: {
           select: { email: true }
@@ -227,7 +228,8 @@ export async function updateResource(req, res) {
         subject: newSubject,
         category: newCategory,
         storageKey,
-        ...(isAdmin && status ? { status } : {})
+        ...(isAdmin && status ? { status } : {}),
+        ...(isAdmin && typeof req.body.isLocked === 'boolean' ? { isLocked: req.body.isLocked } : {})
       }
     });
 
@@ -312,10 +314,23 @@ export async function downloadResource(req, res) {
       return res.status(403).json({ error: 'Access denied: This file has not been approved' });
     }
 
+    const mode = req.query.mode || 'download'; // 'download' | 'preview'
+
+    // If resource is locked (read-only): students can preview/read, but offline download is restricted
+    if (resource.isLocked && !isAdmin && !isOwner && mode === 'download') {
+      return res.status(403).json({
+        error: 'This resource is locked for in-app reading only. Direct offline download is restricted by admin.'
+      });
+    }
+
     const buffer = await downloadPrivateFile(resource.storageKey);
 
     res.setHeader('Content-Type', resource.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resource.originalName)}"`);
+    if (mode === 'preview') {
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(resource.originalName)}"`);
+    } else {
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resource.originalName)}"`);
+    }
     res.setHeader('Content-Length', buffer.length);
 
     return res.send(buffer);

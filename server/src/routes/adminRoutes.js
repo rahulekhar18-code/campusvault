@@ -4,7 +4,8 @@ import {
   getAllResources,
   getAllUsers,
   approveResource,
-  rejectResource
+  rejectResource,
+  toggleResourceLock
 } from '../controllers/adminController.js';
 import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
 
@@ -18,5 +19,6 @@ router.get('/all-resources', getAllResources);
 router.get('/users', getAllUsers);
 router.patch('/resources/:id/approve', approveResource);
 router.patch('/resources/:id/reject', rejectResource);
+router.patch('/resources/:id/toggle-lock', toggleResourceLock);
 
 export default router;
