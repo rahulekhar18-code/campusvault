@@ -367,7 +367,7 @@ export async function purgeOrphanStorage(req, res) {
       purgedCount,
       freedBytes,
       freedMB,
-      message: purgedCount > 0 
+      message: purgedCount > 0
         ? `Successfully purged ${purgedCount} rejected file(s) and freed ${freedMB} MB of cloud storage.`
         : 'Storage is clean! No unreferenced or rejected files found.'
     });

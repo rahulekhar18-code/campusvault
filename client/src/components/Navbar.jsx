@@ -122,8 +122,8 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0, 
 
             {/* User Status, Wallet & Sign Out */}
             <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* Study Credits Wallet Badge (Opens Rewards & WhatsApp Invite Modal) */}
-              {onOpenRewards && (
+              {/* Study Credits Wallet Badge for Students (Admin has master unlimited access) */}
+              {!isAdmin && onOpenRewards && (
                 <button
                   type="button"
                   onClick={onOpenRewards}
