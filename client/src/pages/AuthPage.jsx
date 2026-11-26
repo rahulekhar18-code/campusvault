@@ -30,7 +30,6 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [devOtpCode, setDevOtpCode] = useState('');
 
   // Remember credentials state
   const [rememberMe, setRememberMe] = useState(true);
@@ -110,7 +109,6 @@ export default function AuthPage() {
     setSuccess('');
     setOtp('');
     setOtpSent(false);
-    setDevOtpCode('');
     setPassword('');
     setConfirmPassword('');
   };
@@ -131,13 +129,7 @@ export default function AuthPage() {
     try {
       const res = await sendOtp(cleanEmail);
       setOtpSent(true);
-      if (res.devOtp) {
-        setDevOtpCode(res.devOtp);
-        setOtp(res.devOtp);
-        setSuccess(`Verification code generated and auto-filled! (Also dispatched to ${cleanEmail})`);
-      } else {
-        setSuccess(`Verification code sent to ${cleanEmail}. Please check your Inbox and Spam/Junk folder!`);
-      }
+      setSuccess(res.message || `Verification code sent to ${cleanEmail}. Please check your college inbox.`);
     } catch (err) {
       setError(err.message || 'Failed to send OTP code');
     } finally {
@@ -219,13 +211,7 @@ export default function AuthPage() {
     try {
       const res = await forgotPasswordSendOtp(cleanEmail);
       setOtpSent(true);
-      if (res.devOtp) {
-        setDevOtpCode(res.devOtp);
-        setOtp(res.devOtp);
-        setSuccess(`Password reset code generated and auto-filled! (Also dispatched to ${cleanEmail})`);
-      } else {
-        setSuccess(`Password reset code sent to ${cleanEmail}. Please check your Inbox and Spam/Junk folder!`);
-      }
+      setSuccess(res.message || `Password reset code sent to ${cleanEmail}. Please check your college inbox.`);
     } catch (err) {
       setError(err.message || 'Failed to send password reset code');
     } finally {
@@ -324,24 +310,7 @@ export default function AuthPage() {
           {success && (
             <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start space-x-2.5 text-emerald-800 text-xs sm:text-sm shadow-sm">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium">{success}</p>
-                {devOtpCode && (
-                  <div className="mt-2 p-2 bg-white rounded-lg border border-emerald-300 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider block">Fast-Track Code:</span>
-                      <span className="text-base font-mono font-bold text-emerald-700 tracking-widest">{devOtpCode}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(devOtpCode)}
-                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold shadow-sm"
-                    >
-                      Fill Code
-                    </button>
-                  </div>
-                )}
-              </div>
+              <p className="font-medium leading-relaxed">{success}</p>
             </div>
           )}
         </div>

@@ -46,6 +46,13 @@ export async function sendOtpEmail(email, otp, purpose = 'registration') {
     from: `"CampusVault" <${process.env.EMAIL_USER || 'no-reply@campusvault.ycce.in'}>`,
     to: email,
     subject: subjectText,
+    priority: 'high',
+    headers: {
+      'X-Priority': '1',
+      'X-MSMail-Priority': 'High',
+      'Importance': 'high'
+    },
+    text: `${headingText}\n\nHello,\n\n${actionText}\n\n${otp}\n\nThis verification code will expire in 10 minutes. If you did not request this, please ignore this email.\n\nCampusVault • College Notes & Resources`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #2563eb; margin-top: 0;">${headingText}</h2>

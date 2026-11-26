@@ -63,15 +63,14 @@ export async function sendOtp(req, res) {
       }
     });
 
-    // Send email asynchronously in background so response is instant (< 100ms)
-    sendOtpEmail(cleanEmail, otp).catch(err => {
-      console.warn(`Email notice for ${cleanEmail}: ${err.message}`);
-    });
+    const sent = await sendOtpEmail(cleanEmail, otp);
+    if (!sent) {
+      return res.status(500).json({ error: 'Unable to deliver verification email. Please check your college email address or try again.' });
+    }
 
     return res.json({
       success: true,
-      message: `Verification code sent to ${cleanEmail}`,
-      devOtp: otp
+      message: `Verification code sent to ${cleanEmail}. Please check your college inbox or spam folder.`
     });
   } catch (error) {
     console.error('sendOtp error:', error);
@@ -266,15 +265,14 @@ export async function forgotPasswordSendOtp(req, res) {
       }
     });
 
-    // Send email asynchronously in background so response is instant (< 100ms)
-    sendOtpEmail(cleanEmail, otp, 'reset').catch(err => {
-      console.warn(`Email notice for ${cleanEmail}: ${err.message}`);
-    });
+    const sent = await sendOtpEmail(cleanEmail, otp, 'reset');
+    if (!sent) {
+      return res.status(500).json({ error: 'Unable to deliver password reset email. Please try again.' });
+    }
 
     return res.json({
       success: true,
-      message: `Password reset code sent to ${cleanEmail}`,
-      devOtp: otp
+      message: `Password reset code sent to ${cleanEmail}. Please check your college inbox or spam folder.`
     });
   } catch (error) {
     console.error('forgotPasswordSendOtp error:', error);
