@@ -19,8 +19,8 @@ router.get('/', authenticateToken, getApprovedResources);
 // Toggle bookmark on a resource (student and admin)
 router.post('/:id/bookmark', authenticateToken, toggleBookmark);
 
-// Upload a file (student -> PENDING, admin -> auto APPROVED)
-router.post('/upload', authenticateToken, upload.single('file'), uploadResource);
+// Upload files (single or multiple batch upload)
+router.post('/upload', authenticateToken, upload.any(), uploadResource);
 
 // View personal uploads & statuses (student/admin)
 router.get('/my-uploads', authenticateToken, getMyUploads);

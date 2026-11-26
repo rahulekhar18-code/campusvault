@@ -22,6 +22,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
   const [subject, setSubject] = useState(resource.subject || '');
   const [isCustomSubject, setIsCustomSubject] = useState(false);
   const [customSubject, setCustomSubject] = useState('');
+  const [unit, setUnit] = useState(resource.unit || 'Unit 1');
   const [category, setCategory] = useState(resource.category || 'Notes');
   const [status, setStatus] = useState(resource.status || 'PENDING');
   const [isLocked, setIsLocked] = useState(resource.isLocked || false);
@@ -42,6 +43,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
       setTitle(resource.title || '');
       setBranch(resource.branch || 'IT');
       setSemester(resource.semester || '1');
+      setUnit(resource.unit || 'Unit 1');
       setCategory(resource.category || 'Notes');
       setStatus(resource.status || 'PENDING');
       setIsLocked(resource.isLocked || false);
@@ -100,6 +102,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
           branch,
           semester,
           subject: finalSubject,
+          unit,
           category,
           ...(isAdmin ? { status, isLocked, isTopperVerified, isProfVerified } : {})
         })
@@ -111,6 +114,7 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
         branch,
         semester,
         subject: finalSubject,
+        unit,
         category,
         status,
         isLocked,
@@ -231,6 +235,21 @@ export default function EditResourceModal({ resource, isOpen, onClose, onUpdated
                   className="mt-2 w-full text-sm p-2 bg-white border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                Unit / Folder
+              </label>
+              <select
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                className="w-full text-sm p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              >
+                {['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'General / All Units'].map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
             </div>
 
             <div>

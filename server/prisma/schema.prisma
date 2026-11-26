@@ -40,7 +40,8 @@ model Resource {
   branch          String
   semester        String
   subject         String
-  category        String         // Notes, PYQ, Practicals, Assignments
+  unit            String         @default("Unit 1") // Unit 1, Unit 2, Unit 3, Unit 4, Unit 5, Unit 6, General
+  category        String         // Notes, PYQ, Practicals, Assignments, Placement
   originalName    String
   storageKey      String
   bucketName      String         @default("campusvault-files")
@@ -59,6 +60,7 @@ model Resource {
 
   @@index([status])
   @@index([branch, semester, subject])
+  @@index([branch, semester, subject, unit])
   @@map("resources")
 }
 

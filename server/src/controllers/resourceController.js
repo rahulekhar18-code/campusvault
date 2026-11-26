@@ -11,7 +11,7 @@ function sanitizePathSegment(val) {
  */
 export async function getApprovedResources(req, res) {
   try {
-    const { search, branch, semester, subject, category } = req.query;
+    const { search, branch, semester, subject, unit, category } = req.query;
 
     const where = {
       status: 'APPROVED'
@@ -25,6 +25,9 @@ export async function getApprovedResources(req, res) {
     }
     if (subject && subject !== 'all') {
       where.subject = { equals: subject, mode: 'insensitive' };
+    }
+    if (unit && unit !== 'all') {
+      where.unit = { equals: unit, mode: 'insensitive' };
     }
     if (category && category !== 'all') {
       where.category = { equals: category, mode: 'insensitive' };
@@ -54,6 +57,7 @@ export async function getApprovedResources(req, res) {
         branch: true,
         semester: true,
         subject: true,
+        unit: true,
         category: true,
         originalName: true,
         fileSize: true,
@@ -86,19 +90,21 @@ export async function getApprovedResources(req, res) {
 }
 
 /**
- * Upload a file (Student -> PENDING, Admin -> APPROVED)
+ * Upload single or multiple files (Student -> PENDING, Admin -> APPROVED)
  */
 export async function uploadResource(req, res) {
   try {
-    const { title, branch, semester, subject, category } = req.body;
-    const file = req.file;
+    const { title, branch, semester, subject, unit, category } = req.body;
+    const files = (req.files && req.files.length > 0) ? req.files : (req.file ? [req.file] : []);
 
-    if (!file) {
-      return res.status(400).json({ error: 'File selection is required' });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'At least one file is required for upload' });
     }
-    if (!title || !branch || !semester || !subject || !category) {
-      return res.status(400).json({ error: 'All fields (title, branch, semester, subject, category) are required' });
+    if (!branch || !semester || !subject || !category) {
+      return res.status(400).json({ error: 'All fields (branch, semester, subject, category) are required' });
     }
+
+    const assignedUnit = unit && unit.trim() ? unit.trim() : 'Unit 1';
 
     // Retrieve storage naming convention from AppSettings
     const settings = await prisma.appSettings.findUnique({
@@ -106,49 +112,68 @@ export async function uploadResource(req, res) {
     });
 
     const root = settings?.storageRoot || 'vault';
-    let folder = settings?.folderFormat || '{branch}/{semester}/{subject}/{category}';
+    let folder = settings?.folderFormat || '{branch}/{semester}/{subject}/{unit}/{category}';
 
     folder = folder
       .replace('{branch}', sanitizePathSegment(branch))
       .replace('{semester}', sanitizePathSegment(semester))
       .replace('{subject}', sanitizePathSegment(subject))
+      .replace('{unit}', sanitizePathSegment(assignedUnit))
       .replace('{category}', sanitizePathSegment(category));
-
-    const cleanName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const storageKey = `${root}/${folder}/${cleanName}`.replace(/\/+/g, '/');
-
-    // Upload to private Supabase storage
-    await uploadPrivateFile(file.buffer, storageKey, file.mimetype, file.originalname);
 
     // Initial approval status: Admin uploads are auto-approved, student uploads are pending
     const initialStatus = req.user.role === 'ADMIN' ? 'APPROVED' : 'PENDING';
 
-    const resource = await prisma.resource.create({
-      data: {
-        title: title.trim(),
-        branch: branch.trim(),
-        semester: semester.toString().trim(),
-        subject: subject.trim(),
-        category: category.trim(),
-        originalName: file.originalname,
-        storageKey,
-        bucketName: BUCKET_NAME,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        status: initialStatus,
-        uploaderId: req.user.id
-      },
-      include: {
-        uploader: {
-          select: { email: true }
-        }
+    const createdResources = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const cleanName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const storageKey = `${root}/${folder}/${cleanName}`.replace(/\/+/g, '/');
+
+      // Upload to private Supabase storage
+      await uploadPrivateFile(file.buffer, storageKey, file.mimetype, file.originalname);
+
+      // Title determination: if multiple files, assign each file's title cleanly
+      const nameWithoutExt = file.originalname.replace(/\.[^/.]+$/, '');
+      let fileTitle = (title && title.trim()) || nameWithoutExt;
+      if (files.length > 1) {
+        fileTitle = title && title.trim() ? `${title.trim()} - ${nameWithoutExt}` : nameWithoutExt;
       }
-    });
+
+      const resource = await prisma.resource.create({
+        data: {
+          title: fileTitle,
+          branch: branch.trim(),
+          semester: semester.toString().trim(),
+          subject: subject.trim(),
+          unit: assignedUnit,
+          category: category.trim(),
+          originalName: file.originalname,
+          storageKey,
+          bucketName: BUCKET_NAME,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          status: initialStatus,
+          uploaderId: req.user.id
+        },
+        include: {
+          uploader: {
+            select: { email: true }
+          }
+        }
+      });
+
+      createdResources.push(resource);
+    }
 
     return res.status(201).json({
       success: true,
-      message: initialStatus === 'APPROVED' ? 'File uploaded and automatically approved' : 'File uploaded successfully and submitted for admin approval',
-      resource
+      message: initialStatus === 'APPROVED' 
+        ? `${createdResources.length} file(s) uploaded and automatically approved in ${assignedUnit}!` 
+        : `${createdResources.length} file(s) uploaded and submitted for admin approval in ${assignedUnit}!`,
+      resource: createdResources[0],
+      resources: createdResources
     });
   } catch (error) {
     console.error('uploadResource error:', error);
@@ -205,6 +230,7 @@ export async function updateResource(req, res) {
     const newSemester = semester !== undefined ? semester.toString().trim() : resource.semester;
     const newSubject = subject !== undefined ? subject.trim() : resource.subject;
     const newCategory = category !== undefined ? category.trim() : resource.category;
+    const newUnit = req.body.unit !== undefined ? req.body.unit.trim() : (resource.unit || 'Unit 1');
 
     let storageKey = resource.storageKey;
     const pathChanged = newBranch !== resource.branch ||
@@ -244,6 +270,7 @@ export async function updateResource(req, res) {
         branch: newBranch,
         semester: newSemester,
         subject: newSubject,
+        unit: newUnit,
         category: newCategory,
         storageKey,
         ...(isAdmin && status ? { status } : {}),

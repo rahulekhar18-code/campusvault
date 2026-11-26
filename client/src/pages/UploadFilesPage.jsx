@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_BRANCHES = ['IT', 'CSE', 'AIDS', 'ECE', 'MECH', 'CIVIL', 'EE'];
+const UNIT_OPTIONS = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'General / All Units'];
 
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';
@@ -40,8 +41,9 @@ export default function UploadFilesPage() {
   const [subject, setSubject] = useState('');
   const [isCustomSubject, setIsCustomSubject] = useState(false);
   const [customSubject, setCustomSubject] = useState('');
+  const [unit, setUnit] = useState('Unit 1');
   const [category, setCategory] = useState('Notes');
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
 
   // Available subjects for current branch & semester from database, fallback to static IT if empty
   const academicSubjects = getSubjects(branch, semester);
@@ -86,19 +88,22 @@ export default function UploadFilesPage() {
   }, []);
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      if (selected.size > 25 * 1024 * 1024) {
-        setUploadError('File exceeds 25 MB limit.');
-        setFile(null);
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedList = Array.from(e.target.files);
+      const oversized = selectedList.find(f => f.size > 25 * 1024 * 1024);
+      if (oversized) {
+        setUploadError(`File "${oversized.name}" exceeds 25 MB limit.`);
         return;
       }
-      setFile(selected);
+      setFiles(selectedList);
       setUploadError('');
       // Auto fill title if empty
       if (!title) {
-        const nameWithoutExt = selected.name.replace(/\.[^/.]+$/, '');
-        setTitle(nameWithoutExt);
+        if (selectedList.length === 1) {
+          setTitle(selectedList[0].name.replace(/\.[^/.]+$/, ''));
+        } else {
+          setTitle(`${unit} Study Material`);
+        }
       }
     }
   };
@@ -110,8 +115,8 @@ export default function UploadFilesPage() {
 
     const finalSubject = isCustomSubject ? customSubject.trim() : subject.trim();
 
-    if (!file) {
-      setUploadError('Please select a file to upload');
+    if (!files || files.length === 0) {
+      setUploadError('Please select at least one file to upload');
       return;
     }
     if (!title.trim() || !finalSubject) {
@@ -124,8 +129,12 @@ export default function UploadFilesPage() {
     formData.append('branch', branch);
     formData.append('semester', semester);
     formData.append('subject', finalSubject);
+    formData.append('unit', unit);
     formData.append('category', category);
-    formData.append('file', file);
+    
+    files.forEach(f => {
+      formData.append('files', f);
+    });
 
     setUploading(true);
     try {
@@ -136,14 +145,13 @@ export default function UploadFilesPage() {
 
       setUploadSuccess(
         user?.role === 'ADMIN'
-          ? 'File uploaded and automatically approved!'
-          : 'File uploaded successfully! Status is PENDING admin approval.'
+          ? `${files.length} file(s) uploaded and automatically approved in ${unit}!`
+          : `${files.length} file(s) uploaded successfully! Status is PENDING admin approval in ${unit}.`
       );
 
       // Reset form
       setTitle('');
-      setSubject('');
-      setFile(null);
+      setFiles([]);
       const fileInput = document.getElementById('file-upload-input');
       if (fileInput) fileInput.value = '';
 
@@ -297,6 +305,21 @@ export default function UploadFilesPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
+                    Academic Unit / Folder
+                  </label>
+                  <select
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    className="w-full text-sm p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  >
+                    {UNIT_OPTIONS.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
                     Category
                   </label>
                   <select
@@ -311,23 +334,58 @@ export default function UploadFilesPage() {
                 </div>
               </div>
 
-              {/* File Selection */}
+              {/* Multi-File Selection */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">
-                  Choose File (PDF, DOCX, PPT, Images)
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1 flex items-center justify-between">
+                  <span>Choose File(s) - Single or Batch</span>
+                  <span className="text-[10px] text-blue-600 font-bold">Select multiple with Ctrl</span>
                 </label>
                 <input
                   id="file-upload-input"
                   type="file"
-                  required
+                  multiple
+                  required={files.length === 0}
                   onChange={handleFileChange}
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.rar,.png,.jpg,.jpeg"
                   className="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-lg p-1 bg-gray-50"
                 />
-                {file && (
-                  <p className="mt-1 text-[11px] text-gray-500 font-mono">
-                    Selected: {file.name} ({formatFileSize(file.size)})
-                  </p>
+
+                {/* Selected Files List Preview */}
+                {files.length > 0 && (
+                  <div className="mt-2.5 space-y-1.5 max-h-40 overflow-y-auto bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                    <div className="text-[11px] font-bold text-gray-700 flex justify-between items-center mb-1">
+                      <span>{files.length} File(s) Ready for {unit}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setFiles([]);
+                          const fileInput = document.getElementById('file-upload-input');
+                          if (fileInput) fileInput.value = '';
+                        }} 
+                        className="text-red-500 hover:text-red-700 text-[10px] font-semibold"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                    {files.map((f, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[11px] text-gray-700 bg-white p-2 rounded-md border border-gray-200 shadow-2xs">
+                        <span className="truncate max-w-[210px] sm:max-w-xs font-medium" title={f.name}>
+                          📄 {f.name}
+                        </span>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          <span className="text-[10px] text-gray-400 font-mono">{formatFileSize(f.size)}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => setFiles(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-gray-400 hover:text-red-600 font-bold px-1 rounded hover:bg-gray-100"
+                            title="Remove file"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -338,7 +396,11 @@ export default function UploadFilesPage() {
                 style={{ backgroundColor: settings.themeColor || '#2563eb' }}
               >
                 <Upload className="w-4 h-4" />
-                <span>{uploading ? 'Uploading to Storage...' : 'Upload File'}</span>
+                <span>
+                  {uploading 
+                    ? `Uploading ${files.length} File(s)...` 
+                    : (files.length > 1 ? `Upload All ${files.length} Files to ${unit}` : 'Upload File')}
+                </span>
               </button>
 
               <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 flex items-start space-x-2 text-[11px] text-blue-800">
@@ -412,6 +474,8 @@ export default function UploadFilesPage() {
                           <span>{item.branch}</span>
                           <span>•</span>
                           <span>Sem {item.semester}</span>
+                          <span>•</span>
+                          <span className="font-medium text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded">{item.unit || 'Unit 1'}</span>
                           <span>•</span>
                           <span>{item.category}</span>
                           <span>•</span>

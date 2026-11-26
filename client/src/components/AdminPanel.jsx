@@ -677,7 +677,10 @@ export default function AdminPanel({ onPendingCountChange }) {
                       </td>
                       <td className="px-3 py-3">
                         <div className="font-semibold text-gray-800">{item.subject}</div>
-                        <div className="text-[10px] font-medium text-gray-500">{item.category}</div>
+                        <div className="text-[10px] font-medium text-gray-500">
+                          {item.unit && <span className="font-bold text-blue-600 mr-1">{item.unit} •</span>}
+                          {item.category}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <span className="font-mono text-[10px] text-gray-600 bg-gray-100 px-2 py-1 rounded block max-w-xs truncate" title={item.storageKey}>

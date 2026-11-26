@@ -7,7 +7,7 @@ import { getSubjectsForSemester } from '../data/subjects';
 import DocumentReaderModal from '../components/DocumentReaderModal';
 import { 
   Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
-  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase, Bookmark 
+  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase, Bookmark, Folder, FolderOpen 
 } from 'lucide-react';
 
 function formatFileSize(bytes) {
@@ -32,6 +32,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
   const [selectedBranch, setSelectedBranch] = useState('All');
   const [selectedSemester, setSelectedSemester] = useState('All');
   const [selectedSubject, setSelectedSubject] = useState('All');
+  const [selectedUnit, setSelectedUnit] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [topperOnly, setTopperOnly] = useState(false);
   
@@ -57,6 +58,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
       if (selectedBranch !== 'All') params.append('branch', selectedBranch);
       if (selectedSemester !== 'All') params.append('semester', selectedSemester);
       if (selectedSubject !== 'All') params.append('subject', selectedSubject);
+      if (selectedUnit !== 'All') params.append('unit', selectedUnit);
       if (selectedCategory !== 'All') params.append('category', selectedCategory);
       if (topperOnly) params.append('topperOnly', 'true');
       if (isBookmarksOnly) params.append('bookmarksOnly', 'true');
@@ -72,7 +74,7 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
 
   useEffect(() => {
     fetchResources();
-  }, [selectedBranch, selectedSemester, selectedSubject, selectedCategory, topperOnly, isBookmarksOnly]);
+  }, [selectedBranch, selectedSemester, selectedSubject, selectedUnit, selectedCategory, topperOnly, isBookmarksOnly]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -243,6 +245,28 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
           </div>
         </div>
 
+        {/* Unit / Folder Selector Pills */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 mt-3.5 pt-3 border-t border-gray-100 scrollbar-none">
+          <span className="text-xs font-bold text-gray-500 mr-1 flex items-center space-x-1 flex-shrink-0">
+            <Folder className="w-3.5 h-3.5 text-blue-600" />
+            <span>Unit:</span>
+          </span>
+          {['All', 'Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'General'].map((u) => (
+            <button
+              key={u}
+              type="button"
+              onClick={() => setSelectedUnit(u)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition flex-shrink-0 ${
+                selectedUnit === u
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {u === 'All' ? 'All Units' : u}
+            </button>
+          ))}
+        </div>
+
         {/* Quick Discovery Pills */}
         <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-gray-100 text-xs">
           <span className="text-gray-400 font-semibold text-[11px] mr-1">Quick Filters:</span>
@@ -336,6 +360,9 @@ export default function ReadFilesPage({ isBookmarksOnly = false }) {
                 {/* Top Row: Category, Verification Badges, Bookmark & Lock Status */}
                 <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
                   <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                      {item.unit || 'Unit 1'}
+                    </span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
                       {item.category}
                     </span>
