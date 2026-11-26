@@ -5,7 +5,8 @@ import {
   getMyUploads,
   updateResource,
   deleteResource,
-  downloadResource
+  downloadResource,
+  toggleBookmark
 } from '../controllers/resourceController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { upload } from '../middleware/uploadMiddleware.js';
@@ -14,6 +15,9 @@ const router = Router();
 
 // Read approved files (student and admin)
 router.get('/', authenticateToken, getApprovedResources);
+
+// Toggle bookmark on a resource (student and admin)
+router.post('/:id/bookmark', authenticateToken, toggleBookmark);
 
 // Upload a file (student -> PENDING, admin -> auto APPROVED)
 router.post('/upload', authenticateToken, upload.single('file'), uploadResource);

@@ -55,6 +55,9 @@ function AppContent() {
         {/* Page 2: Read Files */}
         {currentPage === 'read' && <ReadFilesPage />}
 
+        {/* Page 2.5: Bookmarked Notes / Exam Pocket */}
+        {currentPage === 'bookmarks' && <ReadFilesPage isBookmarksOnly={true} />}
+
         {/* Page 3: Upload Files */}
         {currentPage === 'upload' && <UploadFilesPage />}
 

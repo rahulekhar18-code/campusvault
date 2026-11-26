@@ -32,6 +32,9 @@ export async function getApprovedResources(req, res) {
     if (req.query.topperOnly === 'true') {
       where.isTopperVerified = true;
     }
+    if (req.query.bookmarksOnly === 'true' && req.user?.id) {
+      where.bookmarks = { some: { userId: req.user.id } };
+    }
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
@@ -61,11 +64,21 @@ export async function getApprovedResources(req, res) {
         createdAt: true,
         uploader: {
           select: { email: true }
-        }
+        },
+        bookmarks: req.user?.id ? {
+          where: { userId: req.user.id },
+          select: { id: true }
+        } : false
       }
     });
 
-    return res.json(resources);
+    const mapped = resources.map((item) => ({
+      ...item,
+      isBookmarked: Array.isArray(item.bookmarks) && item.bookmarks.length > 0,
+      bookmarks: undefined
+    }));
+
+    return res.json(mapped);
   } catch (error) {
     console.error('getApprovedResources error:', error);
     return res.status(500).json({ error: 'Failed to retrieve resources' });
@@ -344,5 +357,58 @@ export async function downloadResource(req, res) {
   } catch (error) {
     console.error('downloadResource error:', error);
     return res.status(500).json({ error: 'Failed to download file from private storage' });
+  }
+}
+
+/**
+ * Toggle bookmark for a resource (Student & Admin)
+ */
+export async function toggleBookmark(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const resource = await prisma.resource.findUnique({
+      where: { id }
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    const existing = await prisma.bookmark.findUnique({
+      where: {
+        userId_resourceId: {
+          userId,
+          resourceId: id
+        }
+      }
+    });
+
+    if (existing) {
+      await prisma.bookmark.delete({
+        where: { id: existing.id }
+      });
+      return res.json({
+        success: true,
+        isBookmarked: false,
+        message: 'Removed from Bookmarks'
+      });
+    } else {
+      await prisma.bookmark.create({
+        data: {
+          userId,
+          resourceId: id
+        }
+      });
+      return res.json({
+        success: true,
+        isBookmarked: true,
+        message: 'Saved to Bookmarks'
+      });
+    }
+  } catch (error) {
+    console.error('toggleBookmark error:', error);
+    return res.status(500).json({ error: 'Failed to toggle bookmark' });
   }
 }

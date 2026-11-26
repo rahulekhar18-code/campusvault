@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, downloadFile } from '../api/client';
+import { apiRequest, downloadFile, toggleBookmark } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
 import { useAcademic } from '../context/AcademicContext';
@@ -7,7 +7,7 @@ import { getSubjectsForSemester } from '../data/subjects';
 import DocumentReaderModal from '../components/DocumentReaderModal';
 import { 
   Search, Download, FileText, Filter, Calendar, BookOpen, Layers, 
-  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase 
+  Lock, Unlock, Eye, AlertCircle, X, ShieldAlert, Award, ShieldCheck, Briefcase, Bookmark 
 } from 'lucide-react';
 
 function formatFileSize(bytes) {
@@ -18,7 +18,7 @@ function formatFileSize(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-export default function ReadFilesPage() {
+export default function ReadFilesPage({ isBookmarksOnly = false }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const { settings } = useAppSettings();
@@ -59,6 +59,7 @@ export default function ReadFilesPage() {
       if (selectedSubject !== 'All') params.append('subject', selectedSubject);
       if (selectedCategory !== 'All') params.append('category', selectedCategory);
       if (topperOnly) params.append('topperOnly', 'true');
+      if (isBookmarksOnly) params.append('bookmarksOnly', 'true');
 
       const data = await apiRequest(`/resources?${params.toString()}`);
       setResources(data || []);
@@ -71,11 +72,27 @@ export default function ReadFilesPage() {
 
   useEffect(() => {
     fetchResources();
-  }, [selectedBranch, selectedSemester, selectedSubject, selectedCategory, topperOnly]);
+  }, [selectedBranch, selectedSemester, selectedSubject, selectedCategory, topperOnly, isBookmarksOnly]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchResources();
+  };
+
+  const handleToggleBookmark = async (resourceId) => {
+    // Optimistic UI update
+    setResources(prev =>
+      isBookmarksOnly
+        ? prev.filter(r => r.id !== resourceId)
+        : prev.map(r => r.id === resourceId ? { ...r, isBookmarked: !r.isBookmarked } : r)
+    );
+
+    try {
+      await toggleBookmark(resourceId);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+      fetchResources();
+    }
   };
 
   const handlePreview = (resource) => {
@@ -104,17 +121,28 @@ export default function ReadFilesPage() {
       {/* Page Title & Subtitle */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <BookOpen className="w-6 h-6" style={{ color: settings.themeColor || '#2563eb' }} />
-            <span>Read Files</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center space-x-2">
+            {isBookmarksOnly ? (
+              <>
+                <Bookmark className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 fill-amber-400" />
+                <span>My Bookmarks (Exam Pocket)</span>
+              </>
+            ) : (
+              <>
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: settings.themeColor || '#2563eb' }} />
+                <span>Read Files</span>
+              </>
+            )}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Browse and read verified academic resources approved by faculty and administrators.
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            {isBookmarksOnly 
+              ? 'Your quick-access saved notes, formula sheets, and study materials pinned for exams.'
+              : 'Browse and read verified academic resources approved by faculty and administrators.'}
           </p>
         </div>
         <div className="flex items-center gap-2 self-start md:self-auto">
           <div className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-            Showing <span className="font-semibold text-gray-800">{resources.length}</span> approved files
+            Showing <span className="font-semibold text-gray-800">{resources.length}</span> {isBookmarksOnly ? 'saved' : 'approved'} files
           </div>
         </div>
       </div>
@@ -283,12 +311,18 @@ export default function ReadFilesPage() {
         </div>
       ) : resources.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-          <div className="w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-            <BookOpen className="w-6 h-6" />
+          <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3 ${
+            isBookmarksOnly ? 'bg-amber-50 text-amber-500' : 'bg-gray-100 text-gray-400'
+          }`}>
+            {isBookmarksOnly ? <Bookmark className="w-6 h-6 fill-amber-400" /> : <BookOpen className="w-6 h-6" />}
           </div>
-          <h3 className="text-base font-semibold text-gray-900">No approved resources found</h3>
+          <h3 className="text-base font-semibold text-gray-900">
+            {isBookmarksOnly ? 'No notes saved to your Exam Pocket yet' : 'No approved resources found'}
+          </h3>
           <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
-            Try adjusting your search criteria or filter options to discover other study materials.
+            {isBookmarksOnly 
+              ? 'Tap the bookmark star icon on any document in Read Files to keep it saved here for fast revision before exams.'
+              : 'Try adjusting your search criteria or filter options to discover other study materials.'}
           </p>
         </div>
       ) : (
@@ -299,7 +333,7 @@ export default function ReadFilesPage() {
               className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
             >
               <div>
-                {/* Top Row: Category, Verification Badges & Lock Status */}
+                {/* Top Row: Category, Verification Badges, Bookmark & Lock Status */}
                 <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
@@ -319,7 +353,21 @@ export default function ReadFilesPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="flex items-center space-x-1.5">
+                    {/* Bookmark / Exam Pocket Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBookmark(item.id)}
+                      className={`p-1 rounded-md border transition ${
+                        item.isBookmarked
+                          ? 'bg-amber-50 text-amber-600 border-amber-300 hover:bg-amber-100'
+                          : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-amber-500 hover:bg-amber-50'
+                      }`}
+                      title={item.isBookmarked ? 'Remove from Exam Pocket' : 'Save to Exam Pocket'}
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${item.isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    </button>
+
                     {item.isLocked ? (
                       <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                         <Lock className="w-2.5 h-2.5" />

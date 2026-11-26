@@ -184,3 +184,12 @@ export async function askDocumentAssist(resourceId, prompt, mode = 'summary') {
     body: JSON.stringify({ resourceId, prompt, mode })
   });
 }
+
+/**
+ * Toggle bookmark for a resource
+ */
+export async function toggleBookmark(resourceId) {
+  return await apiRequest(`/resources/${resourceId}/bookmark`, {
+    method: 'POST'
+  });
+}

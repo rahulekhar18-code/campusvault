@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAppSettings } from '../context/AppSettingsContext';
-import { BookOpen, Upload, Shield, LogOut, GraduationCap } from 'lucide-react';
+import { BookOpen, Upload, Shield, LogOut, GraduationCap, Bookmark } from 'lucide-react';
 
 export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }) {
   const { user, logout } = useAuth();
@@ -58,6 +58,19 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
               >
                 <BookOpen className="w-4 h-4" />
                 <span>Read Files</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentPage('bookmarks')}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
+                  currentPage === 'bookmarks'
+                    ? 'text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                style={currentPage === 'bookmarks' ? { backgroundColor: settings.themeColor || '#2563eb' } : {}}
+              >
+                <Bookmark className="w-4 h-4" />
+                <span>Bookmarks</span>
               </button>
 
               <button
@@ -139,6 +152,21 @@ export default function Navbar({ currentPage, setCurrentPage, pendingCount = 0 }
             <BookOpen className="w-5 h-5" />
           </div>
           <span className="text-[10px] sm:text-[11px] mt-0.5">Read</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentPage('bookmarks')}
+          className={`flex-1 flex flex-col items-center justify-center py-1 rounded-xl transition-all ${
+            currentPage === 'bookmarks'
+              ? 'text-blue-600 font-bold'
+              : 'text-gray-500 hover:text-gray-900 font-medium'
+          }`}
+          style={currentPage === 'bookmarks' ? { color: settings.themeColor || '#2563eb' } : {}}
+        >
+          <div className={`p-1 rounded-lg ${currentPage === 'bookmarks' ? 'bg-blue-50' : ''}`}>
+            <Bookmark className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] sm:text-[11px] mt-0.5">Saved</span>
         </button>
 
         <button
