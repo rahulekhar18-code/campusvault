@@ -89,13 +89,17 @@ function AppContent() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-gray-200 py-4 px-4 text-center text-xs text-gray-400 mb-14 md:mb-0 space-y-1">
-        <p>CampusVault • Lightweight College Notes & Resources • Verified @ycce.in</p>
-        <div>
+      <footer className="bg-white border-t border-gray-200 py-4 px-4 text-center text-xs text-gray-500 mb-14 md:mb-0 space-y-1.5">
+        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          <span>CampusVault • Lightweight College Notes & Resources</span>
+          <span className="hidden sm:inline">•</span>
+          <span>Contact: <a href="mailto:rahulekhar18@gmail.com" className="text-blue-600 hover:underline font-medium">rahulekhar18@gmail.com</a></span>
+        </p>
+        <div className="flex items-center justify-center space-x-3 text-[11px] text-gray-400">
           <button
             type="button"
             onClick={() => setShowTermsModal(true)}
-            className="text-[11px] text-gray-400 hover:text-blue-600 underline transition"
+            className="hover:text-blue-600 underline transition"
           >
             Terms of Service & Academic Honor Code
           </button>

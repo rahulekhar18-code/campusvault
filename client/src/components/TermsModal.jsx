@@ -93,6 +93,15 @@ export default function TermsModal({ isOpen, onClose }) {
               Breach of these terms, malicious tampering, or distribution of sensitive exam materials may result in immediate revocation of portal access and formal reporting to the college disciplinary committee.
             </p>
           </div>
+
+          <div>
+            <h3 className="font-bold text-gray-900 text-sm mb-1 flex items-center space-x-1.5">
+              <span>7. Support & Inquiries</span>
+            </h3>
+            <p className="text-xs sm:text-sm">
+              For academic queries, feedback, or portal support, please contact the administrator directly at <a href="mailto:rahulekhar18@gmail.com" className="text-blue-600 underline font-semibold">rahulekhar18@gmail.com</a>.
+            </p>
+          </div>
         </div>
 
         {/* Modal Footer */}
