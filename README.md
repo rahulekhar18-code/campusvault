@@ -84,4 +84,21 @@ npm run test:e2e
 - **Admin Account**: `24071279@ycce.in`
   - Admin logs in through the exact same login page.
   - Password can be created securely during OTP registration or updated as needed.
-- **Student Accounts**: Any verified `@ycce.in` email address.
+- **Student Accounts**: Any verified college email address.
+
+---
+
+## ⭐ Show Your Support
+
+If you find **CampusVault** helpful for your semester study preparation, please consider giving it a **Star (⭐)** on GitHub!  
+It helps other college students discover the project and keeps the platform growing.
+
+> **💡 Found this project useful? Give it a ⭐ on GitHub & share it with your batchmates!**
+
+---
+
+## 📬 Contact & Support
+
+For any questions, feedback, or collaborations:
+- **Developer & Maintainer**: Rahul
+- **Email**: [rahulekhar18@gmail.com](mailto:rahulekhar18@gmail.com)
